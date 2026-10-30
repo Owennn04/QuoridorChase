@@ -1,5 +1,29 @@
+<<<<<<< HEAD
 __pycache__/
 *.pyc
 .pytest_cache/
 .ipynb_checkpoints/
 
+=======
+# Editor & OS
+.vscode/
+*.code-workspace
+Thumbs.db
+.DS_Store
+
+# Logs & Temp
+*.log
+temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+
+# Environment variables
+.env
+>>>>>>> e82c1e2d87a683f3ce7838794c991d54b480c281
