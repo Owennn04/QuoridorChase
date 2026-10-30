@@ -1,0 +1,21 @@
+# Editor & OS
+.vscode/
+*.code-workspace
+Thumbs.db
+.DS_Store
+
+# Logs & Temp
+*.log
+temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+
+# Environment variables
+.env
