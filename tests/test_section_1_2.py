@@ -222,3 +222,28 @@ def test_terminal_state_and_utility():
     state.score_runners = 60
     assert state.get_utility() == UTILITY_RUNNER_WIN
 
+
+if __name__ == "__main__":
+    print("=" * 65)
+    print("🚀 MENJALANKAN UNIT TESTS BAGIAN 1.2 (State Space & PEAS)")
+    print("=" * 65)
+    test_initial_state_s0()
+    print("  [1/8] test_initial_state_s0                         : LULUS ✅")
+    test_orthogonal_movement_and_wall_blocking()
+    print("  [2/8] test_orthogonal_movement_and_wall_blocking    : LULUS ✅")
+    test_juggernaut_smash_mechanic()
+    print("  [3/8] test_juggernaut_smash_mechanic                : LULUS ✅")
+    test_grappling_rope_wall_jump()
+    print("  [4/8] test_grappling_rope_wall_jump                 : LULUS ✅")
+    test_solo_wall_decay_vs_coop_wall_welding()
+    print("  [5/8] test_solo_wall_decay_vs_coop_wall_welding     : LULUS ✅")
+    test_2tile_wall_placement_and_no_cage_rule()
+    print("  [6/8] test_2tile_wall_placement_and_no_cage_rule    : LULUS ✅")
+    test_data_orb_collection_and_tag_teleport()
+    print("  [7/8] test_data_orb_collection_and_tag_teleport     : LULUS ✅")
+    test_terminal_state_and_utility()
+    print("  [8/8] test_terminal_state_and_utility               : LULUS ✅")
+    print("=" * 65)
+    print("🎉 SEMUA 8 PENGUJIAN BAGIAN 1.2 LULUS DENGAN SEMPURNA!")
+    print("=" * 65)
+

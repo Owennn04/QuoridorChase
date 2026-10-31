@@ -29,7 +29,7 @@ def evaluate_state(state):
     Semakin tinggi nilai kembalian, semakin menguntungkan bagi AI Boss.
     """
     # 1. Goal Test (Terminal State Evaluation)
-    if state.time_remaining <= 0 or state.current_turn >= 60:
+    if state.time_remaining <= 0 or getattr(state, "turn_count", 0) >= 60 or state.is_terminal():
         if state.score_ai > state.score_runners:
             return UTILITY_AI_WIN
         elif state.score_runners > state.score_ai:
