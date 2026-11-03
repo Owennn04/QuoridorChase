@@ -17,7 +17,8 @@ from config import (
     SMASH_COOLDOWN_RESET,
     SOLO_WALL_LIFETIME,
     POINTS_AI_TAG,
-    POINTS_RUNNER_ORB
+    POINTS_RUNNER_ORB,
+    MAX_SIMULATION_TURNS
 )
 from engine.state import GameState, canonical_edge
 from engine.rules import wall_to_edges
@@ -224,7 +225,7 @@ def step_turn_cycle(state, elapsed_seconds=0.0):
     # Decrement match time by actual elapsed time
     if elapsed_seconds > 0.0:
         state.time_remaining = max(0.0, state.time_remaining - elapsed_seconds)
-    if state.time_remaining <= 0 or state.turn_count >= state.grid_size * 10:
+    if state.time_remaining <= 0 or state.turn_count >= MAX_SIMULATION_TURNS:
         state.is_game_over = True
         if state.score_ai > state.score_runners:
             state.winner = "AI Boss"
