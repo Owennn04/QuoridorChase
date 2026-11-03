@@ -66,7 +66,7 @@ def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
         actions.append((priority, ("SMASH", dest)))
 
     # --- 3. Candidate WALL Actions (Filtered) ---
-    if max_walls > 0:
+    if max_walls > 0 and getattr(state, "ai_walls", 1) > 0:
         candidate_walls = []
         g = state.grid_size
         focus_targets = [r1_pos, r2_pos]
@@ -99,74 +99,6 @@ def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
     # Sort all actions by priority descending (Move Ordering for max pruning)
     actions.sort(key=lambda item: item[0], reverse=True)
     return [act for _, act in actions]
-
-
-def get_candidate_actions_runners(state, max_combinations=8):
-    """
-    Candidate Move Filtering for Team Runners (Node MIN).
-    
-    Generates joint moves for both runners: ('TEAM_DUAL', (act_r1, act_r2))
-    Each runner considers:
-    1. Orthogonal MOVE (away from AI Boss, toward closest active orb)
-    2. ROPE jump (escape wall if AI Boss is close)
-    3. WALL placement (defensive wall or Co-op Wall Welding)
-    
-    Combinations are scored and capped at max_combinations to prevent
-    combinatorial explosion.
-    """
-    ai_pos = state.p_ai
-    
-    def get_individual_moves(r_idx):
-        r_pos = state.p_runners[r_idx]
-        moves = []
-        
-        # 1. Normal Steps
-        valid_steps = get_valid_steps(state, r_pos)
-        for step in valid_steps:
-            dist_ai = manhattan_distance(step, ai_pos)
-            min_orb_dist = min([manhattan_distance(step, o) for o in state.orbs]) if state.orbs else 10
-            score = (dist_ai * 3.0) - (min_orb_dist * 2.0)
-            moves.append((score, ("MOVE", step)))
-            
-        # 2. Rope Jump
-        if state.runner_ropes[r_idx] > 0:
-            jump_moves = can_wall_jump(state, r_idx)
-            for dest, _ in jump_moves:
-                dist_ai = manhattan_distance(dest, ai_pos)
-                curr_dist = manhattan_distance(r_pos, ai_pos)
-                if dist_ai > curr_dist:
-                    min_orb_dist = min([manhattan_distance(dest, o) for o in state.orbs]) if state.orbs else 10
-                    score = (dist_ai * 4.0) - (min_orb_dist * 2.0) + 10.0
-                    moves.append((score, ("ROPE", dest)))
-                    
-        # 3. Defensive Wall
-        cx = (r_pos[0] + ai_pos[0]) // 2
-        cy = (r_pos[1] + ai_pos[1]) // 2
-        for orient in ("H", "V"):
-            wx = max(0, min(state.grid_size - 2, cx))
-            wy = max(0, min(state.grid_size - 2, cy))
-            if is_valid_2tile_wall(state, orient, wx, wy, allow_coop_welding=True, runner_idx=r_idx):
-                score = 25.0 if is_valid_coop_weld(state, orient, wx, wy, runner_idx=r_idx) else 5.0
-                moves.append((score, ("WALL", (orient, wx, wy))))
-
-        moves.sort(key=lambda m: m[0], reverse=True)
-        return moves[:4]
-
-    moves_r1 = get_individual_moves(0)
-    moves_r2 = get_individual_moves(1)
-
-    dual_actions = []
-    for score1, act1 in moves_r1:
-        for score2, act2 in moves_r2:
-            combined_score = score1 + score2
-            if act1[0] == "WALL" and act2[0] == "WALL" and act1[1] == act2[1]:
-                combined_score += 30.0  # Co-op welding makes wall permanent!
-            
-            dual_actions.append((combined_score, ("TEAM_DUAL", (act1, act2))))
-
-    dual_actions.sort(key=lambda a: a[0], reverse=True)
-    return [act for _, act in dual_actions[:max_combinations]]
-
 
 class SearchMetrics:
     """Telemetry and diagnostics for adversarial tree search."""

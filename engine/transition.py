@@ -16,6 +16,8 @@ Handles:
 from config import (
     SMASH_COOLDOWN_RESET,
     SOLO_WALL_LIFETIME,
+    INITIAL_RUNNER_WALLS,
+    INITIAL_AI_WALLS,
     POINTS_AI_TAG,
     POINTS_RUNNER_ORB,
     MAX_SIMULATION_TURNS
@@ -47,6 +49,7 @@ def apply_ai_action(state, action):
         new_state.coop_walls.discard(edge)
 
         # Obliterate companion segment if part of a placed 2-tile wall
+        smashed_keys = []
         for w_key in list(new_state.placed_walls.keys()):
             w_edges = wall_to_edges(w_key[0], w_key[1], w_key[2])
             if edge in w_edges:
@@ -55,6 +58,19 @@ def apply_ai_action(state, action):
                         del new_state.solo_walls[we]
                     new_state.coop_walls.discard(we)
                 del new_state.placed_walls[w_key]
+                smashed_keys.append(w_key)
+
+        # Kembalikan tembok yang dihancurkan ke inventory pemiliknya (Runner / AI Boss)
+        for w_key in smashed_keys:
+            if w_key in new_state.runner_placed_walls[0]:
+                new_state.runner_placed_walls[0].remove(w_key)
+                new_state.runner_walls[0] = min(INITIAL_RUNNER_WALLS, new_state.runner_walls[0] + 1)
+            if w_key in new_state.runner_placed_walls[1]:
+                new_state.runner_placed_walls[1].remove(w_key)
+                new_state.runner_walls[1] = min(INITIAL_RUNNER_WALLS, new_state.runner_walls[1] + 1)
+            if w_key in new_state.ai_placed_walls:
+                new_state.ai_placed_walls.remove(w_key)
+                new_state.ai_walls = min(INITIAL_AI_WALLS, new_state.ai_walls + 1)
 
         new_state.invalidate_wall_cache()
 
@@ -70,12 +86,18 @@ def apply_ai_action(state, action):
     elif action_type == "WALL":
         # Support 2-tile wall (orient, x, y) or single edge
         if isinstance(payload, (tuple, list)) and len(payload) == 3 and isinstance(payload[0], str):
-            edges = wall_to_edges(payload[0], payload[1], payload[2])
+            w_key = (payload[0].upper(), payload[1], payload[2])
+            edges = wall_to_edges(w_key[0], w_key[1], w_key[2])
             for e in edges:
                 new_state.solo_walls[e] = SOLO_WALL_LIFETIME
-            new_state.placed_walls[(payload[0], payload[1], payload[2])] = (SOLO_WALL_LIFETIME, "AI")
+            new_state.placed_walls[w_key] = (SOLO_WALL_LIFETIME, "AI")
+            if new_state.ai_walls > 0:
+                new_state.ai_walls -= 1
+            new_state.ai_placed_walls.append(w_key)
         else:
             new_state.solo_walls[payload] = SOLO_WALL_LIFETIME
+            if new_state.ai_walls > 0:
+                new_state.ai_walls -= 1
         new_state.invalidate_wall_cache()
 
     # Pass turn to Runners
@@ -117,6 +139,12 @@ def apply_runner_action(state, runner_idx, action, coop_partner_wall=None):
         else:
             edges = [payload]
             w_key = None
+
+        # Kurangi kuota tembok runner dan catat dalam urutan penempatan (FIFO)
+        if new_state.runner_walls[runner_idx] > 0:
+            new_state.runner_walls[runner_idx] -= 1
+        if w_key is not None:
+            new_state.runner_placed_walls[runner_idx].append(w_key)
 
         # Determine if this wall is welded into permanent Co-op Wall:
         # Case 1: Simultaneous team action (minimax / team dual where partner also chose this wall)
@@ -212,11 +240,24 @@ def step_turn_cycle(state, elapsed_seconds=0.0):
         owner = val[1] if isinstance(val, (tuple, list)) else "RUNNER"
         if ttl > 0:
             if ttl <= 1:
-                expired_pw.append(w)
+                expired_pw.append((w, owner))
             else:
                 state.placed_walls[w] = (ttl - 1, owner)
-    for w in expired_pw:
+    for w, owner in expired_pw:
         del state.placed_walls[w]
+        # Kembalikan tembok yang kedaluwarsa ke inventory pemilik
+        if owner == "AI":
+            if w in state.ai_placed_walls:
+                state.ai_placed_walls.remove(w)
+            state.ai_walls = min(INITIAL_AI_WALLS, state.ai_walls + 1)
+        elif owner == "RUNNER_0":
+            if w in state.runner_placed_walls[0]:
+                state.runner_placed_walls[0].remove(w)
+            state.runner_walls[0] = min(INITIAL_RUNNER_WALLS, state.runner_walls[0] + 1)
+        elif owner == "RUNNER_1":
+            if w in state.runner_placed_walls[1]:
+                state.runner_placed_walls[1].remove(w)
+            state.runner_walls[1] = min(INITIAL_RUNNER_WALLS, state.runner_walls[1] + 1)
 
     # AI Boss turn starting: cooldown decay
     if state.smash_cooldown > 0:
@@ -234,3 +275,44 @@ def step_turn_cycle(state, elapsed_seconds=0.0):
         else:
             state.winner = "Draw"
     return state
+
+
+def recycle_oldest_wall_if_empty(state, runner_idx):
+    """
+    FIFO Wall Recycle Mechanic:
+    Jika Runner kehabisan kuota tembok (0/5) dan masih memiliki tembok aktif di papan,
+    tembok yang paling pertama dipasang oleh runner tersebut akan ditarik kembali
+    ke inventory sehingga menjadi 1/5.
+
+    Return:
+        w_key yang ditarik, atau None jika tidak ada tembok yang perlu/bisa didaur ulang.
+    """
+    if state.runner_walls[runner_idx] > 0:
+        return None
+    if not state.runner_placed_walls[runner_idx]:
+        return None
+
+    oldest_w = state.runner_placed_walls[runner_idx].pop(0)
+
+    # Hapus segmen tembok dari solo_walls dan coop_walls
+    edges = wall_to_edges(oldest_w[0], oldest_w[1], oldest_w[2])
+    for e in edges:
+        if e in state.solo_walls:
+            del state.solo_walls[e]
+        state.coop_walls.discard(e)
+
+    if oldest_w in state.placed_walls:
+        del state.placed_walls[oldest_w]
+
+    state.invalidate_wall_cache()
+
+    # Kembalikan kuota tembok ke runner (menjadi 1/5)
+    state.runner_walls[runner_idx] = min(INITIAL_RUNNER_WALLS, state.runner_walls[runner_idx] + 1)
+
+    # Jika partner juga ikut mematri tembok ini (co-op wall), kembalikan juga kuota partner
+    other_idx = 1 - runner_idx
+    if oldest_w in state.runner_placed_walls[other_idx]:
+        state.runner_placed_walls[other_idx].remove(oldest_w)
+        state.runner_walls[other_idx] = min(INITIAL_RUNNER_WALLS, state.runner_walls[other_idx] + 1)
+
+    return oldest_w

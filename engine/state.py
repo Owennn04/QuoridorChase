@@ -19,6 +19,8 @@ from config import (
     RESPAWN_CANDIDATE_CORNERS,
     SMASH_COOLDOWN_INITIAL,
     INITIAL_RUNNER_ROPES,
+    INITIAL_RUNNER_WALLS,
+    INITIAL_AI_WALLS,
     ACTIVE_ORB_TARGET_COUNT,
     MATCH_DURATION_SECONDS,
     MAX_SIMULATION_TURNS,
@@ -69,6 +71,10 @@ class GameState:
         "orbs",
         "smash_cooldown",
         "runner_ropes",
+        "runner_walls",
+        "ai_walls",
+        "runner_placed_walls",
+        "ai_placed_walls",
         "score_ai",
         "score_runners",
         "current_turn",
@@ -91,6 +97,10 @@ class GameState:
         orbs=None,
         smash_cooldown=SMASH_COOLDOWN_INITIAL,
         runner_ropes=None,
+        runner_walls=None,
+        ai_walls=None,
+        runner_placed_walls=None,
+        ai_placed_walls=None,
         score_ai=0,
         score_runners=0,
         current_turn="R1",
@@ -109,6 +119,10 @@ class GameState:
         self.orbs = set(orbs) if orbs is not None else set()
         self.smash_cooldown = smash_cooldown
         self.runner_ropes = list(runner_ropes) if runner_ropes is not None else list(INITIAL_RUNNER_ROPES)
+        self.runner_walls = list(runner_walls) if runner_walls is not None else [INITIAL_RUNNER_WALLS, INITIAL_RUNNER_WALLS]
+        self.ai_walls = ai_walls if ai_walls is not None else INITIAL_AI_WALLS
+        self.runner_placed_walls = [list(runner_placed_walls[0]), list(runner_placed_walls[1])] if runner_placed_walls is not None else [[], []]
+        self.ai_placed_walls = list(ai_placed_walls) if ai_placed_walls is not None else []
         self.score_ai = score_ai
         self.score_runners = score_runners
         self.current_turn = current_turn
@@ -142,6 +156,10 @@ class GameState:
             orbs=set(),
             smash_cooldown=SMASH_COOLDOWN_INITIAL,
             runner_ropes=list(INITIAL_RUNNER_ROPES),
+            runner_walls=[INITIAL_RUNNER_WALLS, INITIAL_RUNNER_WALLS],
+            ai_walls=INITIAL_AI_WALLS,
+            runner_placed_walls=[[], []],
+            ai_placed_walls=[],
             score_ai=0,
             score_runners=0,
             current_turn="R1",
@@ -173,6 +191,10 @@ class GameState:
         cloned.orbs = self.orbs.copy()
         cloned.smash_cooldown = self.smash_cooldown
         cloned.runner_ropes = [self.runner_ropes[0], self.runner_ropes[1]]
+        cloned.runner_walls = [self.runner_walls[0], self.runner_walls[1]]
+        cloned.ai_walls = self.ai_walls
+        cloned.runner_placed_walls = [list(self.runner_placed_walls[0]), list(self.runner_placed_walls[1])]
+        cloned.ai_placed_walls = list(self.ai_placed_walls)
         cloned.score_ai = self.score_ai
         cloned.score_runners = self.score_runners
         cloned.current_turn = self.current_turn

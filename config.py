@@ -24,6 +24,8 @@ SMASH_COOLDOWN_INITIAL = 0    # 0 = READY (Overload)
 SMASH_COOLDOWN_RESET = 3      # 3 turns cooldown after Juggernaut Smash
 SOLO_WALL_LIFETIME = 2        # Solo wall expires after 2 turns
 INITIAL_RUNNER_ROPES = [1, 1] # 1 rope item per runner
+INITIAL_RUNNER_WALLS = 5      # Kuota tembok masing-masing runner (5 tembok)
+INITIAL_AI_WALLS = 5          # Kuota tembok AI Boss (terpisah dari runner)
 ACTIVE_ORB_TARGET_COUNT = 3   # Always maintain 3 data orbs on board
 WALL_SPAN_TILES = 2           # Standard Quoridor wall length: spans 2 tiles
 

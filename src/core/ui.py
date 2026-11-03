@@ -27,7 +27,9 @@ from config import (
     RUNNER_START_POSITIONS,
     ACTIVE_ORB_TARGET_COUNT,
     MATCH_DURATION_SECONDS,
-    SOLO_WALL_LIFETIME
+    SOLO_WALL_LIFETIME,
+    INITIAL_RUNNER_WALLS,
+    INITIAL_AI_WALLS
 )
 from engine.state import GameState, canonical_edge
 from engine.rules import (
@@ -41,11 +43,13 @@ from engine.rules import (
 from engine.transition import (
     apply_runner_action,
     apply_ai_action,
-    step_turn_cycle
+    step_turn_cycle,
+    recycle_oldest_wall_if_empty
 )
 from src.ai.minimax import (
     MinimaxAgent,
-    get_candidate_actions_runners
+    get_candidate_actions_runners,
+    runner_minimax_choose
 )
 from src.ai.pathfinding import manhattan_distance
 
@@ -362,8 +366,17 @@ class GameUI:
         orient = self.wall_orient
         w_key = (orient, r, c)
 
+        # FIFO Wall Recycle jika runner kehabisan tembok (0/5) tapi punya tembok di papan
+        recycled = recycle_oldest_wall_if_empty(self.state, runner_idx)
+        if recycled:
+            self.log_message(f"Runner {runner_idx+1} kehabisan kuota tembok (0/{INITIAL_RUNNER_WALLS})! Tembok tertua di {recycled} didaur ulang ke inventory (1/{INITIAL_RUNNER_WALLS}).")
+
+        if self.state.runner_walls[runner_idx] <= 0:
+            self.log_message(f"Runner {runner_idx+1} tidak memiliki tembok di inventory (0/{INITIAL_RUNNER_WALLS})!")
+            return
+
         is_weld = is_valid_coop_weld(self.state, orient, r, c, runner_idx=runner_idx)
-        is_valid_new = is_valid_2tile_wall(self.state, orient, r, c, allow_coop_welding=False)
+        is_valid_new = is_valid_2tile_wall(self.state, orient, r, c, allow_coop_welding=False, runner_idx=runner_idx)
 
         if is_weld:
             self.record_move(f"Runner {runner_idx+1}", "WELD", w_key)
@@ -408,6 +421,10 @@ class GameUI:
         """Memajukan giliran setelah runner selesai mengambil aksi."""
         if self.state.current_turn == "R1":
             self.state.current_turn = "R2"
+            # Cek FIFO Recycle jika R2 kehabisan tembok
+            recycled = recycle_oldest_wall_if_empty(self.state, 1)
+            if recycled:
+                self.log_message(f"Runner 2 kehabisan kuota tembok (0/{INITIAL_RUNNER_WALLS})! Tembok tertua di {recycled} didaur ulang ke inventory (1/{INITIAL_RUNNER_WALLS}).")
             self.log_message("Sekarang giliran Runner 2 (R2).")
         elif self.state.current_turn == "R2":
             # Putaran runners selesai, lakukan maintenance turn cycle
@@ -456,82 +473,64 @@ class GameUI:
 
         # Kembalikan giliran ke Runner 1
         self.state.current_turn = "R1"
+        recycled = recycle_oldest_wall_if_empty(self.state, 0)
+        if recycled:
+            self.log_message(f"Runner 1 kehabisan kuota tembok (0/{INITIAL_RUNNER_WALLS})! Tembok tertua di {recycled} didaur ulang ke inventory (1/{INITIAL_RUNNER_WALLS}).")
         self.log_message("Ronde baru dimulai: Giliran Runner 1 (R1).")
     
     
     def execute_auto_step(self):
-        """Menjalankan 1 langkah otomatis (untuk mode Auto-Play atau tekan Spasi)."""
+        """
+        Menjalankan 1 langkah otomatis (untuk mode Auto-Play atau tekan Spasi).
+
+        Runner Bot menggunakan Minimax Alpha-Beta Pruning (depth=2)
+        untuk memprediksi respons AI Boss sebelum memilih aksi terbaik.
+        Mendukung aksi: MOVE, ROPE, WALL, dan Co-op Wall Welding.
+        """
         if self.state.is_game_over:
             return
 
         if self.state.current_turn in ("R1", "R2"):
             r_idx = 0 if self.state.current_turn == "R1" else 1
-            r_pos = self.state.p_runners[r_idx]
-            ai_pos = self.state.p_ai
             recent = self.r1_history if r_idx == 0 else self.r2_history
-            has_rope = (self.state.runner_ropes[r_idx] > 0)
-            other_idx = 1 - r_idx
-            other_pos = self.state.p_runners[other_idx]
 
-            candidate_actions = []
+            # FIFO Wall Recycle jika runner kehabisan tembok saat gilirannya
+            recycled = recycle_oldest_wall_if_empty(self.state, r_idx)
+            if recycled:
+                self.log_message(f"Runner {r_idx+1} kehabisan kuota tembok (0/{INITIAL_RUNNER_WALLS})! Tembok tertua di {recycled} didaur ulang ke inventory (1/{INITIAL_RUNNER_WALLS}).")
 
-            # 1. Langkah Normal (MOVE)
-            for step in get_valid_steps(self.state, r_pos):
-                if step != other_pos:
-                    candidate_actions.append(("MOVE", step))
+            # --- Panggil Runner Minimax Alpha-Beta (depth=2) ---
+            best_act, best_val = runner_minimax_choose(
+                self.state, r_idx,
+                recent_history=recent,
+                depth=2
+            )
 
-            # 2. Langkah Melompati Tembok dengan Grappling Rope (ROPE)
-            if has_rope:
-                for dest, edge in can_wall_jump(self.state, r_idx):
-                    if dest != other_pos:
-                        candidate_actions.append(("ROPE", dest))
+            # Eksekusi aksi terpilih pada game state
+            act_type, payload = best_act
 
-            if candidate_actions:
-                def score_action(act):
-                    act_type, step = act
-                    d_ai = manhattan_distance(step, ai_pos)
-                    d_orb = min([manhattan_distance(step, o) for o in self.state.orbs]) if self.state.orbs else 5
-                    score = (d_ai * 2.5) - (d_orb * 1.5)
+            self.record_move(f"Runner {r_idx+1}", act_type, payload)
 
-                    # Penilaian Taktis Penggunaan Grappling Rope
-                    if act_type == "ROPE":
-                        curr_d_ai = manhattan_distance(r_pos, ai_pos)
-                        is_emergency_escape = (curr_d_ai <= 2 and d_ai > curr_d_ai)
-                        is_orb_snatch = (step in self.state.orbs)
-
-                        if is_emergency_escape:
-                            score += 55.0  # Sangat krusial kabur melompati tembok saat AI mendekat!
-                        elif is_orb_snatch:
-                            score += 40.0  # Sangat menguntungkan langsung menyambar Data Orb
-                        elif curr_d_ai <= 3 and d_ai >= curr_d_ai + 1:
-                            score += 20.0  # Taktis untuk memperlebar jarak dari AI
-                        else:
-                            # Jika tidak darurat & tidak ada orb di seberang tembok, simpan rope
-                            score -= 25.0
-
-                    # Anti-Oscillation: Penalti bertingkat pada petak yang baru saja dikunjungi
-                    if len(recent) >= 1 and step == recent[-1]:
-                        score -= 30.0
-                    elif len(recent) >= 2 and step in recent[-4:]:
-                        score -= 15.0
-                    elif len(recent) >= 5 and step in recent[-8:]:
-                        score -= 10.0
-
-                    return score
-
-                best_act = max(candidate_actions, key=score_action)
-                act_type, best_step = best_act
-
-                self.record_move(f"Runner {r_idx+1}", act_type, best_step)
-                recent.append(best_step)
+            # Update riwayat posisi untuk anti-osilasi
+            if act_type in ("MOVE", "ROPE"):
+                recent.append(payload)
                 if len(recent) > 12:
                     recent.pop(0)
 
-                self.state = apply_runner_action(self.state, r_idx, best_act)
-                if act_type == "ROPE":
-                    self.log_message(f"⚡ Runner {r_idx+1} menggunakan ROPE JUMP melompati tembok ke {best_step}!")
+            # Terapkan aksi ke state
+            self.state = apply_runner_action(self.state, r_idx, best_act)
+
+            # Log pesan sesuai jenis aksi
+            if act_type == "MOVE":
+                self.log_message(f"Runner {r_idx+1} melangkah ke {payload}. [Minimax eval={best_val:.1f}]")
+            elif act_type == "ROPE":
+                self.log_message(f"Runner {r_idx+1} ROPE JUMP ke {payload}! [Minimax eval={best_val:.1f}]")
+            elif act_type == "WALL":
+                orient, wx, wy = payload
+                if is_valid_coop_weld(self.state, orient, wx, wy, runner_idx=r_idx):
+                    self.log_message(f"Runner {r_idx+1} CO-OP WELD tembok di {payload}! [Minimax eval={best_val:.1f}]")
                 else:
-                    self.log_message(f"Runner {r_idx+1} melangkah otomatis ke {best_step}.")
+                    self.log_message(f"Runner {r_idx+1} pasang tembok di {payload}. [Minimax eval={best_val:.1f}]")
 
             self._advance_runner_turn()
 
@@ -821,6 +820,12 @@ class GameUI:
         r1_rope_txt = f"{self.state.runner_ropes[0]}x Sisa" if self.state.runner_ropes[0] > 0 else "Habis"
         r2_rope_txt = f"{self.state.runner_ropes[1]}x Sisa" if self.state.runner_ropes[1] > 0 else "Habis"
         self.screen.blit(self.font_small.render(f"Rope R1   : {r1_rope_txt} | Rope R2: {r2_rope_txt}", True, self.color_gray), (px + 14, cy))
+        cy += 16
+
+        r1_w_txt = f"{self.state.runner_walls[0]}/{INITIAL_RUNNER_WALLS}"
+        r2_w_txt = f"{self.state.runner_walls[1]}/{INITIAL_RUNNER_WALLS}"
+        ai_w_txt = f"{self.state.ai_walls}/{INITIAL_AI_WALLS}"
+        self.screen.blit(self.font_small.render(f"Wall R1   : {r1_w_txt} | R2: {r2_w_txt} | Boss: {ai_w_txt}", True, self.color_gray), (px + 14, cy))
         cy += 20
 
         # Garis pembatas

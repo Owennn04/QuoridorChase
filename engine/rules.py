@@ -123,18 +123,47 @@ def wall_to_edges(orient, x, y):
 
 
 def validate_no_complete_cage_edges(state, candidate_edges):
-    """Validate that adding candidate_edges does not completely trap any player."""
+    """
+    Classical Quoridor Invariant:
+    A wall placement is illegal if it completely traps any player or closes off all paths.
+    1. Every player (AI, R1, R2) must retain at least 1 valid unblocked orthogonal step.
+    2. An unblocked path must exist between AI Boss and Runner 1.
+    3. An unblocked path must exist between AI Boss and Runner 2.
+    """
     walls = state.all_walls()
     for e in candidate_edges:
         if e in walls:
             return False
     combined_walls = walls | set(candidate_edges)
 
-    def comp_size(start):
+    # 1. Pastikan setiap pemain punya minimal 1 langkah ortogonal legal yang tidak tertutup tembok
+    def has_at_least_one_step(pos):
+        cx, cy = pos
+        for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+            nx, ny = cx + dx, cy + dy
+            if 0 <= nx < state.grid_size and 0 <= ny < state.grid_size:
+                edge = canonical_edge((cx, cy), (nx, ny))
+                if edge not in combined_walls:
+                    return True
+        return False
+
+    if not has_at_least_one_step(state.p_ai):
+        return False
+    for r_pos in state.p_runners:
+        if not has_at_least_one_step(r_pos):
+            return False
+
+    # 2. Pastikan ada jalur bebas (BFS unblocked path) dari AI Boss ke setiap Runner
+    def has_path(start, target):
+        if start == target:
+            return True
         visited = {start}
         q = deque([start])
         while q:
-            cx, cy = q.popleft()
+            curr = q.popleft()
+            if curr == target:
+                return True
+            cx, cy = curr
             for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
                 nx, ny = cx + dx, cy + dy
                 if 0 <= nx < state.grid_size and 0 <= ny < state.grid_size:
@@ -144,13 +173,13 @@ def validate_no_complete_cage_edges(state, candidate_edges):
                         if edge not in combined_walls:
                             visited.add(nbr)
                             q.append(nbr)
-        return len(visited)
-
-    if comp_size(state.p_ai) < 4:
         return False
-    for r_pos in state.p_runners:
-        if comp_size(r_pos) < 4:
-            return False
+
+    if not has_path(state.p_ai, state.p_runners[0]):
+        return False
+    if not has_path(state.p_ai, state.p_runners[1]):
+        return False
+
     return True
 
 
@@ -160,14 +189,21 @@ def is_valid_coop_weld(state, orient, x, y, runner_idx=None):
 
     Rules for Co-op Wall Welding:
     1. Coordinates must be within board limits: 0 <= x < g - 1, 0 <= y < g - 1.
-    2. The wall edges must already exist as an active Solo Wall in state.solo_walls.
-    3. The wall must not already be permanent in state.coop_walls.
-    4. The wall must not belong to the AI Boss.
-    5. If runner_idx is provided, the wall must not be solo-welded by the same runner alone.
+    2. Runner must have walls remaining in inventory (runner_walls > 0).
+    3. The wall edges must already exist as an active Solo Wall in state.solo_walls.
+    4. The wall must not already be permanent in state.coop_walls.
+    5. The wall must not belong to the AI Boss.
+    6. If runner_idx is provided, the wall must not be solo-welded by the same runner alone.
     """
     g = state.grid_size
     if not (0 <= x < g - 1 and 0 <= y < g - 1):
         return False
+
+    # Periksa kuota inventory tembok runner
+    if runner_idx is not None and hasattr(state, "runner_walls"):
+        if state.runner_walls[runner_idx] <= 0:
+            return False
+
     e1, e2 = wall_to_edges(orient, x, y)
 
     # Must be currently present in solo_walls
@@ -198,6 +234,11 @@ def is_valid_2tile_wall(state, orient, x, y, allow_coop_welding=False, runner_id
     g = state.grid_size
     if not (0 <= x < g - 1 and 0 <= y < g - 1):
         return False
+
+    # Periksa kuota inventory tembok runner jika runner_idx diberikan
+    if runner_idx is not None and hasattr(state, "runner_walls"):
+        if state.runner_walls[runner_idx] <= 0:
+            return False
 
     # Check Co-op Wall Welding opportunity
     if allow_coop_welding and is_valid_coop_weld(state, orient, x, y, runner_idx=runner_idx):
@@ -231,19 +272,10 @@ def get_all_valid_2tile_walls(state):
 def validate_no_complete_cage(state, candidate_edge):
     """
     Classical Quoridor Invariant:
-    A wall placement is illegal if it completely traps any player in a zero-escape cage
-    or severs all access. In our 9x9 arena, each player must retain reachability to at least 4 cells.
+    A wall placement is illegal if it completely traps any player or closes off all paths.
+    Delegates to validate_no_complete_cage_edges for consistent invariant enforcement.
     """
-    if candidate_edge in state.all_walls():
-        return False
-    # Verify AI Boss has room to navigate
-    if get_reachable_component_size(state, state.p_ai, candidate_edge) < 4:
-        return False
-    # Verify both runners have room to navigate
-    for r_pos in state.p_runners:
-        if get_reachable_component_size(state, r_pos, candidate_edge) < 4:
-            return False
-    return True
+    return validate_no_complete_cage_edges(state, [candidate_edge])
 
 
 def get_valid_wall_placements(state, center=None, max_radius=2):

@@ -16,7 +16,7 @@ from engine.rules import (
     wall_to_edges,
     validate_no_complete_cage_edges
 )
-from engine.transition import apply_action, step_turn_cycle
+from engine.transition import apply_action, step_turn_cycle, recycle_oldest_wall_if_empty
 
 __all__ = [
     "GameState",
@@ -35,5 +35,6 @@ __all__ = [
     "wall_to_edges",
     "validate_no_complete_cage_edges",
     "apply_action",
-    "step_turn_cycle"
+    "step_turn_cycle",
+    "recycle_oldest_wall_if_empty"
 ]
