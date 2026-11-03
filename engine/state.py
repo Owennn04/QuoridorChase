@@ -220,9 +220,6 @@ class GameState:
         """Check if movement between cell c1 and adjacent cell c2 is blocked by a wall."""
         return canonical_edge(c1, c2) in self.all_walls()
 
-    def is_wall_between(self, c1, c2):
-        """Alias for is_blocked, verifying if edge between c1 and c2 has a wall."""
-        return self.is_blocked(c1, c2)
 
     def get_adjacent_cells(self, x, y):
         """

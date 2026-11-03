@@ -35,8 +35,7 @@ def skill_aware_a_star(state, start_pos, target_pos, initial_smash_ready=True):
                 neighbor_pos = (nx, ny)
                 
                 # Cek apakah ada tembok yang menghalangi pergerakan ini
-                # (Asumsi: ada metode is_wall_between di state)
-                wall_blocking = state.is_wall_between(current_pos, neighbor_pos)
+                wall_blocking = state.is_blocked(current_pos, neighbor_pos)
                 
                 # Logika 3D State Transisi
                 if not wall_blocking:
