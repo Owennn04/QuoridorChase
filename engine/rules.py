@@ -11,14 +11,11 @@ Covers:
 """
 
 from collections import deque
-from typing import List, Tuple, Optional, Set
 
-from engine.state import GameState, Cell, WallEdge, canonical_edge
-
-Action = Tuple[str, any]
+from engine.state import GameState, canonical_edge
 
 
-def get_valid_steps(state: GameState, pos: Cell) -> List[Cell]:
+def get_valid_steps(state, pos):
     """Return all adjacent cells reachable via unblocked orthogonal movement."""
     valid = []
     x, y = pos
@@ -28,7 +25,7 @@ def get_valid_steps(state: GameState, pos: Cell) -> List[Cell]:
     return valid
 
 
-def can_wall_jump(state: GameState, runner_idx: int) -> List[Tuple[Cell, WallEdge]]:
+def can_wall_jump(state, runner_idx):
     """
     Check if the runner can use Grappling Rope to jump across an adjacent wall.
     Returns list of (destination_cell, jumped_wall_edge).
@@ -45,7 +42,7 @@ def can_wall_jump(state: GameState, runner_idx: int) -> List[Tuple[Cell, WallEdg
     return results
 
 
-def can_juggernaut_smash(state: GameState) -> List[Tuple[Cell, WallEdge]]:
+def can_juggernaut_smash(state):
     """
     Check if AI Boss can use Juggernaut Smash to break through an adjacent wall.
     Returns list of (destination_cell, destroyed_wall_edge).
@@ -61,15 +58,15 @@ def can_juggernaut_smash(state: GameState) -> List[Tuple[Cell, WallEdge]]:
     return results
 
 
-def has_path_bfs(state: GameState, start: Cell, target: Cell, extra_wall: Optional[WallEdge] = None) -> bool:
+def has_path_bfs(state, start, target, extra_wall=None):
     """Standard BFS checking if an unblocked path exists between start and target."""
     if start == target:
         return True
     walls = state.all_walls()
     if extra_wall:
         walls = walls | {extra_wall}
-    visited: Set[Cell] = {start}
-    queue: deque[Cell] = deque([start])
+    visited = {start}
+    queue = deque([start])
 
     while queue:
         curr = queue.popleft()
@@ -88,13 +85,13 @@ def has_path_bfs(state: GameState, start: Cell, target: Cell, extra_wall: Option
     return False
 
 
-def get_reachable_component_size(state: GameState, start: Cell, extra_wall: Optional[WallEdge] = None) -> int:
+def get_reachable_component_size(state, start, extra_wall=None):
     """Return number of cells reachable from start via BFS."""
     walls = state.all_walls()
     if extra_wall:
         walls = walls | {extra_wall}
-    visited: Set[Cell] = {start}
-    queue: deque[Cell] = deque([start])
+    visited = {start}
+    queue = deque([start])
 
     while queue:
         curr = queue.popleft()
@@ -111,7 +108,7 @@ def get_reachable_component_size(state: GameState, start: Cell, extra_wall: Opti
     return len(visited)
 
 
-def wall_to_edges(orient: str, x: int, y: int) -> Tuple[WallEdge, WallEdge]:
+def wall_to_edges(orient, x, y):
     """Convert a 2-tile wall at intersection (orient, x, y) to its two canonical grid edges."""
     if orient.upper() == "H":
         e1 = canonical_edge((x, y), (x, y + 1))
@@ -124,7 +121,7 @@ def wall_to_edges(orient: str, x: int, y: int) -> Tuple[WallEdge, WallEdge]:
     raise ValueError(f"Unknown orientation: {orient}")
 
 
-def validate_no_complete_cage_edges(state: GameState, candidate_edges: List[WallEdge]) -> bool:
+def validate_no_complete_cage_edges(state, candidate_edges):
     """Validate that adding candidate_edges does not completely trap any player."""
     walls = state.all_walls()
     for e in candidate_edges:
@@ -132,7 +129,7 @@ def validate_no_complete_cage_edges(state: GameState, candidate_edges: List[Wall
             return False
     combined_walls = walls | set(candidate_edges)
 
-    def comp_size(start: Cell) -> int:
+    def comp_size(start):
         visited = {start}
         q = deque([start])
         while q:
@@ -156,7 +153,7 @@ def validate_no_complete_cage_edges(state: GameState, candidate_edges: List[Wall
     return True
 
 
-def is_valid_2tile_wall(state: GameState, orient: str, x: int, y: int) -> bool:
+def is_valid_2tile_wall(state, orient, x, y):
     """Check if 2-tile wall placement (orient, x, y) is legal under standard Quoridor rules."""
     g = state.grid_size
     if not (0 <= x < g - 1 and 0 <= y < g - 1):
@@ -173,7 +170,7 @@ def is_valid_2tile_wall(state: GameState, orient: str, x: int, y: int) -> bool:
     return validate_no_complete_cage_edges(state, [e1, e2])
 
 
-def get_all_valid_2tile_walls(state: GameState) -> List[Tuple[str, int, int]]:
+def get_all_valid_2tile_walls(state):
     """Enumerate all legal 2-tile walls across the board."""
     valid_walls = []
     g = state.grid_size
@@ -186,7 +183,7 @@ def get_all_valid_2tile_walls(state: GameState) -> List[Tuple[str, int, int]]:
     return valid_walls
 
 
-def validate_no_complete_cage(state: GameState, candidate_edge: WallEdge) -> bool:
+def validate_no_complete_cage(state, candidate_edge):
     """
     Classical Quoridor Invariant:
     A wall placement is illegal if it completely traps any player in a zero-escape cage
@@ -204,13 +201,13 @@ def validate_no_complete_cage(state: GameState, candidate_edge: WallEdge) -> boo
     return True
 
 
-def get_valid_wall_placements(state: GameState, center: Optional[Cell] = None, max_radius: int = 2) -> List[WallEdge]:
+def get_valid_wall_placements(state, center=None, max_radius=2):
     """
     Candidate Wall Filtering:
     Enumerate edges within max_radius of center that do not violate the no-cage rule.
     If center is None, enumerates across board.
     """
-    valid_walls: List[WallEdge] = []
+    valid_walls = []
     current_walls = state.all_walls()
     g = state.grid_size
 
@@ -236,4 +233,3 @@ def get_valid_wall_placements(state: GameState, center: Optional[Cell] = None, m
                     valid_walls.append(v_edge)
 
     return valid_walls
-

@@ -10,9 +10,7 @@ Implements:
 - Terminal evaluation and Utility Function U(s)
 """
 
-from __future__ import annotations
 import random
-from typing import Tuple, List, Dict, Set, Optional, Generator
 
 from config import (
     GRID_SIZE,
@@ -31,16 +29,16 @@ from config import (
     POINTS_RUNNER_ORB
 )
 
-Cell = Tuple[int, int]
-WallEdge = Tuple[Cell, Cell]
+Cell = tuple
+WallEdge = tuple
 
 
-def canonical_edge(c1: Cell, c2: Cell) -> WallEdge:
+def canonical_edge(c1, c2):
     """Return edge with sorted endpoints to ensure unique canonical representation."""
     return (c1, c2) if c1 <= c2 else (c2, c1)
 
 
-def edge_to_groove(edge: WallEdge) -> Tuple[str, int, int]:
+def edge_to_groove(edge):
     """Convert canonical edge to groove representation ('H'/'V', x, y)."""
     (x1, y1), (x2, y2) = edge
     if y1 == y2 and abs(x1 - x2) == 1:
@@ -52,7 +50,7 @@ def edge_to_groove(edge: WallEdge) -> Tuple[str, int, int]:
     raise ValueError(f"Edge {edge} is not adjacent orthogonal.")
 
 
-def groove_to_edge(orient: str, x: int, y: int) -> WallEdge:
+def groove_to_edge(orient, x, y):
     """Convert groove representation to canonical edge."""
     if orient.upper() == "V":
         return canonical_edge((x, y), (x + 1, y))
@@ -89,23 +87,23 @@ class GameState:
 
     def __init__(
         self,
-        grid_size: int = GRID_SIZE,
-        p_ai: Cell = AI_START_POS,
-        p_runners: Optional[List[Cell]] = None,
-        solo_walls: Optional[Dict[WallEdge, int]] = None,
-        coop_walls: Optional[Set[WallEdge]] = None,
-        orbs: Optional[Set[Cell]] = None,
-        smash_cooldown: int = SMASH_COOLDOWN_INITIAL,
-        runner_ropes: Optional[List[int]] = None,
-        score_ai: int = 0,
-        score_runners: int = 0,
-        current_turn: str = "R1",
-        turn_count: int = 0,
-        time_remaining: float = float(MATCH_DURATION_SECONDS),
-        match_start_time: Optional[float] = None,
-        placed_walls: Optional[Dict[Tuple[str, int, int], int]] = None,
-        is_game_over: bool = False,
-        winner: Optional[str] = None
+        grid_size=GRID_SIZE,
+        p_ai=AI_START_POS,
+        p_runners=None,
+        solo_walls=None,
+        coop_walls=None,
+        orbs=None,
+        smash_cooldown=SMASH_COOLDOWN_INITIAL,
+        runner_ropes=None,
+        score_ai=0,
+        score_runners=0,
+        current_turn="R1",
+        turn_count=0,
+        time_remaining=float(MATCH_DURATION_SECONDS),
+        match_start_time=None,
+        placed_walls=None,
+        is_game_over=False,
+        winner=None
     ):
         self.grid_size = grid_size
         self.p_ai = p_ai
@@ -124,10 +122,10 @@ class GameState:
         self.placed_walls = dict(placed_walls) if placed_walls is not None else {}
         self.is_game_over = is_game_over
         self.winner = winner
-        self._cached_all_walls: Optional[Set[WallEdge]] = None
+        self._cached_all_walls = None
 
     @classmethod
-    def create_initial_state(cls, seed: Optional[int] = 42) -> GameState:
+    def create_initial_state(cls, seed=42):
         """
         Create canonical initial state S0 (Proposal Bab 2.2 #2):
         - AI Boss at center (4, 4)
@@ -169,7 +167,7 @@ class GameState:
         state.orbs = set(chosen)
         return state
 
-    def clone(self) -> GameState:
+    def clone(self):
         """Fast shallow/field clone avoiding copy.deepcopy overhead."""
         cloned = GameState.__new__(GameState)
         cloned.grid_size = self.grid_size
@@ -192,24 +190,24 @@ class GameState:
         cloned._cached_all_walls = None
         return cloned
 
-    def all_walls(self) -> Set[WallEdge]:
+    def all_walls(self):
         """Return the union of solo and co-op active wall edges."""
         if self._cached_all_walls is None:
             self._cached_all_walls = set(self.solo_walls.keys()) | self.coop_walls
         return self._cached_all_walls
 
-    def invalidate_wall_cache(self) -> None:
+    def invalidate_wall_cache(self):
         self._cached_all_walls = None
 
-    def is_blocked(self, c1: Cell, c2: Cell) -> bool:
+    def is_blocked(self, c1, c2):
         """Check if movement between cell c1 and adjacent cell c2 is blocked by a wall."""
         return canonical_edge(c1, c2) in self.all_walls()
 
-    def is_wall_between(self, c1: Cell, c2: Cell) -> bool:
+    def is_wall_between(self, c1, c2):
         """Alias for is_blocked, verifying if edge between c1 and c2 has a wall."""
         return self.is_blocked(c1, c2)
 
-    def get_adjacent_cells(self, x: int, y: int) -> Generator[Tuple[int, int, bool], None, None]:
+    def get_adjacent_cells(self, x, y):
         """
         Yield (nx, ny, is_blocked_by_wall) for orthogonal adjacent in-bounds cells.
         """
@@ -220,7 +218,7 @@ class GameState:
                 edge = canonical_edge((x, y), (nx, ny))
                 yield nx, ny, (edge in walls)
 
-    def spawn_replacement_orb(self, rng: Optional[random.Random] = None) -> Optional[Cell]:
+    def spawn_replacement_orb(self, rng=None):
         """Spawn a new orb deterministically in the empty cell farthest from AI Boss."""
         occupied = {self.p_ai, self.p_runners[0], self.p_runners[1]} | self.orbs
         empty_cells = [
@@ -243,7 +241,7 @@ class GameState:
         self.orbs.add(chosen)
         return chosen
 
-    def respawn_runner(self, runner_idx: int) -> Cell:
+    def respawn_runner(self, runner_idx):
         """Respawn tagged runner at the farthest unoccupied corner/safe cell from AI Boss."""
         occupied = {self.p_ai, self.p_runners[1 - runner_idx]}
         corners = [c for c in RESPAWN_CANDIDATE_CORNERS if c not in occupied]
@@ -259,11 +257,11 @@ class GameState:
         self.p_runners[runner_idx] = dest
         return dest
 
-    def is_terminal(self) -> bool:
+    def is_terminal(self):
         """Terminal condition: match timer expired, turn limit reached, or explicit game over."""
         return self.is_game_over or self.time_remaining <= 0 or self.turn_count >= MAX_SIMULATION_TURNS
 
-    def get_utility(self) -> float:
+    def get_utility(self):
         """
         Utility Function U(s) from proposal Bab 2.2 #6:
         U(s) = +1000 if score_ai > score_runners
@@ -276,12 +274,12 @@ class GameState:
             return UTILITY_RUNNER_WIN
         return UTILITY_DRAW
 
-    def apply_action(self, action, is_max: Optional[bool] = None) -> GameState:
+    def apply_action(self, action, is_max=None):
         """Execute action via Transition Model T(s, a)."""
         from engine.transition import apply_action as _apply_action
         return _apply_action(self, action, is_max=is_max)
 
-    def to_dict(self) -> dict:
+    def to_dict(self):
         """Serialize state for JSON / WebSocket telemetry transmission."""
         return {
             "grid_size": self.grid_size,
@@ -319,4 +317,3 @@ class GameState:
             "is_game_over": self.is_game_over,
             "winner": self.winner
         }
-

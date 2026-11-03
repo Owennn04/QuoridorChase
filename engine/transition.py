@@ -13,27 +13,23 @@ Handles:
 - Turn alternation and match clock progression
 """
 
-from typing import Tuple, Optional
-
 from config import (
     SMASH_COOLDOWN_RESET,
     SOLO_WALL_LIFETIME,
     POINTS_AI_TAG,
     POINTS_RUNNER_ORB
 )
-from engine.state import GameState, Cell, WallEdge, canonical_edge
+from engine.state import GameState, canonical_edge
 from engine.rules import wall_to_edges
 
-Action = Tuple[str, any]
 
-
-def apply_ai_action(state: GameState, action: Action) -> GameState:
+def apply_ai_action(state, action):
     """Execute AI Boss action on a cloned state."""
     new_state = state.clone()
     action_type, payload = action
 
     if action_type == "MOVE":
-        dest: Cell = payload
+        dest = payload
         new_state.p_ai = dest
         # Check Tag on either runner
         for r_idx in range(len(new_state.p_runners)):
@@ -42,7 +38,7 @@ def apply_ai_action(state: GameState, action: Action) -> GameState:
                 new_state.respawn_runner(r_idx)
 
     elif action_type == "SMASH":
-        dest: Cell = payload
+        dest = payload
         edge = canonical_edge(new_state.p_ai, dest)
         # Destroy wall permanently from all wall sets
         if edge in new_state.solo_walls:
@@ -86,18 +82,13 @@ def apply_ai_action(state: GameState, action: Action) -> GameState:
     return new_state
 
 
-def apply_runner_action(
-    state: GameState,
-    runner_idx: int,
-    action: Action,
-    coop_partner_wall: Optional[any] = None
-) -> GameState:
+def apply_runner_action(state, runner_idx, action, coop_partner_wall=None):
     """Execute a single runner's action on a cloned state."""
     new_state = state.clone()
     action_type, payload = action
 
     if action_type == "MOVE":
-        dest: Cell = payload
+        dest = payload
         new_state.p_runners[runner_idx] = dest
         # Check Data Orb collection
         if dest in new_state.orbs:
@@ -106,7 +97,7 @@ def apply_runner_action(
             new_state.spawn_replacement_orb()
 
     elif action_type == "ROPE":
-        dest: Cell = payload
+        dest = payload
         if new_state.runner_ropes[runner_idx] > 0:
             new_state.runner_ropes[runner_idx] -= 1
             new_state.p_runners[runner_idx] = dest
@@ -142,7 +133,7 @@ def apply_runner_action(
     return new_state
 
 
-def apply_team_runners_action(state: GameState, action: Action) -> GameState:
+def apply_team_runners_action(state, action):
     """
     Execute Team Runners collective action in adversarial search.
     Action format: (('MOVE', c1), ('MOVE', c2)) or ('TEAM_DUAL', (act_r1, act_r2))
@@ -170,7 +161,7 @@ def apply_team_runners_action(state: GameState, action: Action) -> GameState:
     return new_state
 
 
-def apply_action(state: GameState, action: Action, is_max: Optional[bool] = None) -> GameState:
+def apply_action(state, action, is_max=None):
     """
     Universal Transition Model T(s, a).
     If is_max is True (or current_turn == 'AI'), executes AI Boss action.
@@ -182,7 +173,7 @@ def apply_action(state: GameState, action: Action, is_max: Optional[bool] = None
         return apply_team_runners_action(state, action)
 
 
-def step_turn_cycle(state: GameState, elapsed_seconds: float = 0.0) -> GameState:
+def step_turn_cycle(state, elapsed_seconds=0.0):
     """Handle end-of-round maintenance, wall decays, timers and status updates."""
     state.turn_count += 1
 
@@ -227,4 +218,3 @@ def step_turn_cycle(state: GameState, elapsed_seconds: float = 0.0) -> GameState
         else:
             state.winner = "Draw"
     return state
-

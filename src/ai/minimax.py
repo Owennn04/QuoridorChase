@@ -13,7 +13,6 @@ Features:
 - Detailed search metrics (nodes explored, cutoffs, execution time)
 """
 
-from __future__ import annotations
 import time
 import math
 from typing import Tuple, List, Dict, Optional, Callable, Any
