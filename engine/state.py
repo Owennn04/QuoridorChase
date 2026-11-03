@@ -29,10 +29,6 @@ from config import (
     POINTS_RUNNER_ORB
 )
 
-Cell = tuple
-WallEdge = tuple
-
-
 def canonical_edge(c1, c2):
     """Return edge with sorted endpoints to ensure unique canonical representation."""
     return (c1, c2) if c1 <= c2 else (c2, c1)
@@ -157,12 +153,11 @@ class GameState:
         rng = random.Random(seed)
         # Populate initial orbs on empty cells
         occupied = {state.p_ai, state.p_runners[0], state.p_runners[1]}
-        candidates = [
-            (x, y)
-            for x in range(state.grid_size)
-            for y in range(state.grid_size)
-            if (x, y) not in occupied
-        ]
+        candidates = []
+        for x in range(state.grid_size):
+            for y in range(state.grid_size):
+                if (x, y) not in occupied:
+                    candidates.append((x, y))
         chosen = rng.sample(candidates, ACTIVE_ORB_TARGET_COUNT)
         state.orbs = set(chosen)
         return state
@@ -221,12 +216,11 @@ class GameState:
     def spawn_replacement_orb(self, rng=None):
         """Spawn a new orb deterministically in the empty cell farthest from AI Boss."""
         occupied = {self.p_ai, self.p_runners[0], self.p_runners[1]} | self.orbs
-        empty_cells = [
-            (x, y)
-            for x in range(self.grid_size)
-            for y in range(self.grid_size)
-            if (x, y) not in occupied
-        ]
+        empty_cells = []
+        for x in range(self.grid_size):
+            for y in range(self.grid_size):
+                if (x, y) not in occupied:
+                    empty_cells.append((x, y))
         if not empty_cells:
             return None
         # Sort deterministically: farthest from AI Boss, tie-break by coordinate
@@ -244,14 +238,15 @@ class GameState:
     def respawn_runner(self, runner_idx):
         """Respawn tagged runner at the farthest unoccupied corner/safe cell from AI Boss."""
         occupied = {self.p_ai, self.p_runners[1 - runner_idx]}
-        corners = [c for c in RESPAWN_CANDIDATE_CORNERS if c not in occupied]
+        corners = []
+        for c in RESPAWN_CANDIDATE_CORNERS:
+            if c not in occupied:
+                corners.append(c)
         if not corners:
-            corners = [
-                (x, y)
-                for x in range(self.grid_size)
-                for y in range(self.grid_size)
-                if (x, y) not in occupied
-            ]
+            for x in range(self.grid_size):
+                for y in range(self.grid_size):
+                    if (x, y) not in occupied:
+                        corners.append((x, y))
         corners.sort(key=lambda c: abs(c[0] - self.p_ai[0]) + abs(c[1] - self.p_ai[1]), reverse=True)
         dest = corners[0]
         self.p_runners[runner_idx] = dest

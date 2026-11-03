@@ -15,37 +15,19 @@ Features:
 
 import time
 import math
-from typing import Tuple, List, Dict, Optional, Callable, Any
 
-from engine.state import GameState, Cell, WallEdge, canonical_edge
 from engine.rules import (
     get_valid_steps,
     can_wall_jump,
     can_juggernaut_smash,
-    is_valid_2tile_wall,
-    validate_no_complete_cage_edges,
-    wall_to_edges
+    is_valid_2tile_wall
 )
-from engine.transition import apply_action, apply_ai_action, apply_team_runners_action
-from config import (
-    GRID_SIZE,
-    UTILITY_AI_WIN,
-    UTILITY_RUNNER_WIN,
-    UTILITY_DRAW,
-    POINTS_AI_TAG,
-    POINTS_RUNNER_ORB
-)
+from engine.transition import apply_action
 from src.ai.heuristic import evaluate_state
 from src.ai.pathfinding import manhattan_distance
 
-Action = Tuple[str, Any]
 
-
-def get_candidate_actions_ai(
-    state: GameState,
-    max_walls: int = 4,
-    wall_radius: int = 2
-) -> List[Action]:
+def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
     """
     Candidate Move Filtering for AI Boss (Node MAX).
     
@@ -55,7 +37,7 @@ def get_candidate_actions_ai(
     3. WALL: Focused 2-tile walls placed within tactical radius around runners
              or intercepting paths to orbs (capped at max_walls).
     """
-    actions: List[Tuple[float, Action]] = []
+    actions = []
     
     r1_pos = state.p_runners[0]
     r2_pos = state.p_runners[1]
@@ -84,7 +66,7 @@ def get_candidate_actions_ai(
 
     # --- 3. Candidate WALL Actions (Filtered) ---
     if max_walls > 0:
-        candidate_walls: List[Tuple[float, Action]] = []
+        candidate_walls = []
         g = state.grid_size
         focus_targets = [r1_pos, r2_pos]
         tested_walls = set()
@@ -118,10 +100,7 @@ def get_candidate_actions_ai(
     return [act for _, act in actions]
 
 
-def get_candidate_actions_runners(
-    state: GameState,
-    max_combinations: int = 8
-) -> List[Action]:
+def get_candidate_actions_runners(state, max_combinations=8):
     """
     Candidate Move Filtering for Team Runners (Node MIN).
     
@@ -136,9 +115,9 @@ def get_candidate_actions_runners(
     """
     ai_pos = state.p_ai
     
-    def get_individual_moves(r_idx: int) -> List[Tuple[float, Action]]:
+    def get_individual_moves(r_idx):
         r_pos = state.p_runners[r_idx]
-        moves: List[Tuple[float, Action]] = []
+        moves = []
         
         # 1. Normal Steps
         valid_steps = get_valid_steps(state, r_pos)
@@ -160,7 +139,8 @@ def get_candidate_actions_runners(
                     moves.append((score, ("ROPE", dest)))
                     
         # 3. Defensive Wall
-        cx, cy = (r_pos[0] + ai_pos[0]) // 2, (r_pos[1] + ai_pos[1]) // 2
+        cx = (r_pos[0] + ai_pos[0]) // 2
+        cy = (r_pos[1] + ai_pos[1]) // 2
         for orient in ("H", "V"):
             wx = max(0, min(state.grid_size - 2, cx))
             wy = max(0, min(state.grid_size - 2, cy))
@@ -173,7 +153,7 @@ def get_candidate_actions_runners(
     moves_r1 = get_individual_moves(0)
     moves_r2 = get_individual_moves(1)
 
-    dual_actions: List[Tuple[float, Action]] = []
+    dual_actions = []
     for score1, act1 in moves_r1:
         for score2, act2 in moves_r2:
             combined_score = score1 + score2
@@ -195,14 +175,14 @@ class SearchMetrics:
         self.execution_time_ms = 0.0
         self.mode = "ALPHA_BETA"
 
-    def reset(self, mode: str = "ALPHA_BETA"):
+    def reset(self, mode="ALPHA_BETA"):
         self.nodes_explored = 0
         self.cutoffs = 0
         self.max_depth_reached = 0
         self.execution_time_ms = 0.0
         self.mode = mode
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self):
         return {
             "mode": self.mode,
             "nodes_explored": self.nodes_explored,
@@ -224,10 +204,10 @@ class MinimaxAgent:
 
     def __init__(
         self,
-        depth_limit: int = 2,
-        use_alpha_beta: bool = True,
-        use_candidate_filtering: bool = True,
-        eval_fn: Optional[Callable[[GameState], float]] = None
+        depth_limit=2,
+        use_alpha_beta=True,
+        use_candidate_filtering=True,
+        eval_fn=None
     ):
         self.depth_limit = depth_limit
         self.use_alpha_beta = use_alpha_beta
@@ -237,26 +217,22 @@ class MinimaxAgent:
         self.metrics = SearchMetrics()
 
     # --- Mode Toggle Controls ---
-    def set_alpha_beta_mode(self, enabled: bool) -> None:
+    def set_alpha_beta_mode(self, enabled):
         """Explicitly switch Alpha-Beta Pruning ON (True) or OFF (False)."""
         self.use_alpha_beta = bool(enabled)
 
-    def toggle_alpha_beta(self) -> bool:
+    def toggle_alpha_beta(self):
         """Toggle Alpha-Beta Pruning mode. Returns new state (True=ON, False=OFF)."""
         self.use_alpha_beta = not self.use_alpha_beta
         return self.use_alpha_beta
 
     @property
-    def mode_name(self) -> str:
+    def mode_name(self):
         """Return human-readable mode name."""
         return "Alpha-Beta Pruning" if self.use_alpha_beta else "Pure Minimax"
 
     # --- Search Execution ---
-    def choose_action(
-        self,
-        state: GameState,
-        depth: Optional[int] = None
-    ) -> Tuple[Optional[Action], float]:
+    def choose_action(self, state, depth=None):
         """
         Main decision-making function for AI Boss.
         Returns (best_action, best_evaluation_score).
@@ -278,13 +254,13 @@ class MinimaxAgent:
     # Mode 1: Pure Minimax (Without Pruning)
     # =========================================================================
 
-    def _minimax_pure_root(self, state: GameState, depth: int) -> Tuple[Optional[Action], float]:
+    def _minimax_pure_root(self, state, depth):
         self.metrics.nodes_explored += 1
         actions = self._get_actions(state, is_max=True)
         if not actions or depth == 0 or state.is_terminal():
             return None, self.eval_fn(state)
 
-        best_action: Optional[Action] = None
+        best_action = None
         best_val = -math.inf
 
         for action in actions:
@@ -296,7 +272,7 @@ class MinimaxAgent:
 
         return best_action, best_val
 
-    def _minimax_pure(self, state: GameState, depth: int, is_max: bool) -> float:
+    def _minimax_pure(self, state, depth, is_max):
         self.metrics.nodes_explored += 1
         if depth == 0 or state.is_terminal():
             return self.eval_fn(state)
@@ -322,17 +298,13 @@ class MinimaxAgent:
     # Mode 2: Alpha-Beta Pruning Minimax
     # =========================================================================
 
-    def _minimax_alpha_beta_root(
-        self,
-        state: GameState,
-        depth: int
-    ) -> Tuple[Optional[Action], float]:
+    def _minimax_alpha_beta_root(self, state, depth):
         self.metrics.nodes_explored += 1
         actions = self._get_actions(state, is_max=True)
         if not actions or depth == 0 or state.is_terminal():
             return None, self.eval_fn(state)
 
-        best_action: Optional[Action] = None
+        best_action = None
         alpha = -math.inf
         beta = math.inf
 
@@ -345,14 +317,7 @@ class MinimaxAgent:
 
         return best_action, alpha
 
-    def _alpha_beta(
-        self,
-        state: GameState,
-        depth: int,
-        alpha: float,
-        beta: float,
-        is_max: bool
-    ) -> float:
+    def _alpha_beta(self, state, depth, alpha, beta, is_max):
         self.metrics.nodes_explored += 1
         if depth == 0 or state.is_terminal():
             return self.eval_fn(state)
@@ -382,13 +347,13 @@ class MinimaxAgent:
     # Action Generation & Candidate Filtering
     # =========================================================================
 
-    def _get_actions(self, state: GameState, is_max: bool) -> List[Action]:
+    def _get_actions(self, state, is_max):
         """Generate candidate actions according to configuration."""
         if is_max:
             if self.use_candidate_filtering:
                 return get_candidate_actions_ai(state, max_walls=4, wall_radius=2)
             else:
-                acts: List[Action] = []
+                acts = []
                 for s in get_valid_steps(state, state.p_ai):
                     acts.append(("MOVE", s))
                 for d, _ in can_juggernaut_smash(state):
