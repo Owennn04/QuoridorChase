@@ -469,29 +469,70 @@ class GameUI:
             r_pos = self.state.p_runners[r_idx]
             ai_pos = self.state.p_ai
             recent = self.r1_history if r_idx == 0 else self.r2_history
+            has_rope = (self.state.runner_ropes[r_idx] > 0)
+            other_idx = 1 - r_idx
+            other_pos = self.state.p_runners[other_idx]
 
-            # Pilih langkah terbaik untuk runner: menjauhi AI & mendekati Orb
-            valid = get_valid_steps(self.state, r_pos)
-            if valid:
-                def score_step(step):
+            candidate_actions = []
+
+            # 1. Langkah Normal (MOVE)
+            for step in get_valid_steps(self.state, r_pos):
+                if step != other_pos:
+                    candidate_actions.append(("MOVE", step))
+
+            # 2. Langkah Melompati Tembok dengan Grappling Rope (ROPE)
+            if has_rope:
+                for dest, edge in can_wall_jump(self.state, r_idx):
+                    if dest != other_pos:
+                        candidate_actions.append(("ROPE", dest))
+
+            if candidate_actions:
+                def score_action(act):
+                    act_type, step = act
                     d_ai = manhattan_distance(step, ai_pos)
                     d_orb = min([manhattan_distance(step, o) for o in self.state.orbs]) if self.state.orbs else 5
                     score = (d_ai * 2.5) - (d_orb * 1.5)
-                    # Anti-Oscillation: Beri penalti keras jika kembali ke petak 1 langkah lalu
+
+                    # Penilaian Taktis Penggunaan Grappling Rope
+                    if act_type == "ROPE":
+                        curr_d_ai = manhattan_distance(r_pos, ai_pos)
+                        is_emergency_escape = (curr_d_ai <= 2 and d_ai > curr_d_ai)
+                        is_orb_snatch = (step in self.state.orbs)
+
+                        if is_emergency_escape:
+                            score += 55.0  # Sangat krusial kabur melompati tembok saat AI mendekat!
+                        elif is_orb_snatch:
+                            score += 40.0  # Sangat menguntungkan langsung menyambar Data Orb
+                        elif curr_d_ai <= 3 and d_ai >= curr_d_ai + 1:
+                            score += 20.0  # Taktis untuk memperlebar jarak dari AI
+                        else:
+                            # Jika tidak darurat & tidak ada orb di seberang tembok, simpan rope
+                            score -= 25.0
+
+                    # Anti-Oscillation: Penalti bertingkat pada petak yang baru saja dikunjungi
                     if len(recent) >= 1 and step == recent[-1]:
-                        score -= 25.0
+                        score -= 30.0
                     elif len(recent) >= 2 and step in recent[-4:]:
+                        score -= 15.0
+                    elif len(recent) >= 5 and step in recent[-8:]:
                         score -= 10.0
+
                     return score
 
-                best_step = max(valid, key=score_step)
-                self.record_move(f"Runner {r_idx+1}", "MOVE", best_step)
+                best_act = max(candidate_actions, key=score_action)
+                act_type, best_step = best_act
+
+                self.record_move(f"Runner {r_idx+1}", act_type, best_step)
                 recent.append(best_step)
-                if len(recent) > 6:
+                if len(recent) > 12:
                     recent.pop(0)
 
-                self.state = apply_runner_action(self.state, r_idx, ("MOVE", best_step))
-                self.log_message(f"Runner {r_idx+1} melangkah otomatis ke {best_step}.")
+                self.state = apply_runner_action(self.state, r_idx, best_act)
+                if act_type == "ROPE":
+                    self.log_message(f"⚡ Runner {r_idx+1} menggunakan ROPE JUMP melompati tembok ke {best_step}!")
+                else:
+                    self.log_message(f"Runner {r_idx+1} melangkah otomatis ke {best_step}.")
+
             self._advance_runner_turn()
 
         elif self.state.current_turn == "AI":
