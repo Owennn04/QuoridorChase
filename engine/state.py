@@ -233,41 +233,34 @@ class GameState:
                 yield nx, ny, (edge in walls)
 
     def spawn_replacement_orb(self, rng=None):
-        """Spawn a new orb deterministically in the empty cell farthest from AI Boss."""
+        """Memunculkan Data Orb baru secara acak murni (fully random) di petak kosong."""
         occupied = {self.p_ai, self.p_runners[0], self.p_runners[1]} | self.orbs
-        empty_cells = []
-        for x in range(self.grid_size):
-            for y in range(self.grid_size):
-                if (x, y) not in occupied:
-                    empty_cells.append((x, y))
+        empty_cells = [
+            (x, y) for x in range(self.grid_size) for y in range(self.grid_size)
+            if (x, y) not in occupied
+        ]
         if not empty_cells:
             return None
-        # Sort deterministically: farthest from AI Boss, tie-break by coordinate
-        empty_cells.sort(
-            key=lambda c: (-(abs(c[0] - self.p_ai[0]) + abs(c[1] - self.p_ai[1])), c[0], c[1])
-        )
-        if rng is not None:
-            top_candidates = empty_cells[: max(1, len(empty_cells) // 3)]
-            chosen = rng.choice(top_candidates)
-        else:
-            chosen = empty_cells[0]
+
+        # Fully Random: pilih petak acak dari seluruh petak kosong
+        chooser = rng if rng is not None else random
+        chosen = chooser.choice(empty_cells)
+        
         self.orbs.add(chosen)
         return chosen
 
+
     def respawn_runner(self, runner_idx):
-        """Respawn tagged runner at the farthest unoccupied corner/safe cell from AI Boss."""
-        occupied = {self.p_ai, self.p_runners[1 - runner_idx]}
-        corners = []
-        for c in RESPAWN_CANDIDATE_CORNERS:
-            if c not in occupied:
-                corners.append(c)
-        if not corners:
-            for x in range(self.grid_size):
-                for y in range(self.grid_size):
-                    if (x, y) not in occupied:
-                        corners.append((x, y))
-        corners.sort(key=lambda c: abs(c[0] - self.p_ai[0]) + abs(c[1] - self.p_ai[1]), reverse=True)
-        dest = corners[0]
+        """Respawn tagged runner di petak pojok aman yang paling jauh dari AI Boss."""
+        occupied = {self.p_ai, self.p_runners[1 - runner_idx]} | self.orbs
+        candidates = [c for c in RESPAWN_CANDIDATE_CORNERS if c not in occupied]
+        if not candidates:
+            candidates = [
+                (x, y) for x in range(self.grid_size) for y in range(self.grid_size)
+                if (x, y) not in occupied
+            ]
+        
+        dest = max(candidates, key=lambda c: abs(c[0] - self.p_ai[0]) + abs(c[1] - self.p_ai[1]))
         self.p_runners[runner_idx] = dest
         return dest
 
