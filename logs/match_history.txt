@@ -1,20 +1,191 @@
 ================================================================================
        QUORIDOR CHASE: LOCKDOWN - RIWAYAT PERTANDINGAN LENGKAP
 ================================================================================
-Waktu Export     : 2026-11-03 19:29:36
-Skor Akhir       : AI Boss = 0 pts | Runners = 15 pts
-Pemenang         : Sedang Berjalan
-Total Langkah    : 8 aksi dicatat
+Waktu Export     : 2026-11-04 00:51:48
+Skor Akhir       : AI Boss = 40 pts | Runners = 150 pts
+Pemenang         : Runners
+Total Langkah    : 179 aksi dicatat
 Log Pergerakan   : logs/movement_history.log
 --------------------------------------------------------------------------------
 No   | Turn    | Agen               | Aksi   | Target / Posisi  | Skor AI  | Skor R  
 --------------------------------------------------------------------------------
 1    | Turn 0  | Runner 1           | MOVE   | (0, 3)           | 0        | 0       
 2    | Turn 0  | Runner 2           | MOVE   | (8, 3)           | 0        | 15      
-3    | Turn 1  | AI Boss (Step 1/2) | MOVE   | (4, 3)           | 0        | 15      
-4    | Turn 1  | AI Boss (Step 2/2) | MOVE   | (3, 3)           | 0        | 15      
-5    | Turn 1  | Runner 1           | MOVE   | (0, 2)           | 0        | 15      
-6    | Turn 1  | Runner 2           | MOVE   | (8, 2)           | 0        | 15      
-7    | Turn 2  | AI Boss (Step 1/2) | MOVE   | (3, 2)           | 0        | 15      
-8    | Turn 2  | AI Boss (Step 2/2) | WALL   | ('H', 0, 2)      | 0        | 15      
+3    | Turn 1  | AI Boss            | WALL   | ('H', 0, 2)      | 0        | 15      
+4    | Turn 1  | Runner 1           | MOVE   | (0, 4)           | 0        | 15      
+5    | Turn 1  | Runner 2           | MOVE   | (8, 4)           | 0        | 15      
+6    | Turn 2  | AI Boss            | MOVE   | (3, 4)           | 0        | 15      
+7    | Turn 2  | Runner 1           | MOVE   | (0, 5)           | 0        | 15      
+8    | Turn 2  | Runner 2           | MOVE   | (8, 5)           | 0        | 15      
+9    | Turn 3  | AI Boss            | WALL   | ('H', 0, 5)      | 0        | 15      
+10   | Turn 3  | Runner 1           | MOVE   | (0, 4)           | 0        | 15      
+11   | Turn 3  | Runner 2           | MOVE   | (8, 4)           | 0        | 15      
+12   | Turn 4  | AI Boss            | MOVE   | (2, 4)           | 0        | 15      
+13   | Turn 4  | Runner 1           | MOVE   | (0, 3)           | 0        | 15      
+14   | Turn 4  | Runner 2           | MOVE   | (8, 3)           | 0        | 15      
+15   | Turn 5  | AI Boss            | WALL   | ('H', 0, 2)      | 0        | 15      
+16   | Turn 5  | Runner 1           | MOVE   | (0, 4)           | 0        | 15      
+17   | Turn 5  | Runner 2           | MOVE   | (8, 4)           | 0        | 15      
+18   | Turn 6  | AI Boss            | WALL   | ('V', 0, 4)      | 0        | 15      
+19   | Turn 6  | Runner 1           | MOVE   | (0, 5)           | 0        | 15      
+20   | Turn 6  | Runner 2           | MOVE   | (8, 3)           | 0        | 15      
+21   | Turn 7  | AI Boss            | WALL   | ('H', 0, 5)      | 0        | 15      
+22   | Turn 7  | Runner 1           | MOVE   | (0, 4)           | 0        | 15      
+23   | Turn 7  | Runner 2           | MOVE   | (8, 2)           | 0        | 15      
+24   | Turn 8  | AI Boss            | MOVE   | (1, 4)           | 0        | 15      
+25   | Turn 8  | Runner 1           | MOVE   | (0, 3)           | 0        | 15      
+26   | Turn 8  | Runner 2           | MOVE   | (8, 1)           | 0        | 15      
+27   | Turn 9  | AI Boss            | WALL   | ('H', 0, 2)      | 0        | 15      
+28   | Turn 9  | Runner 1           | MOVE   | (0, 4)           | 0        | 15      
+29   | Turn 9  | Runner 2           | MOVE   | (7, 1)           | 0        | 15      
+30   | Turn 10 | AI Boss            | MOVE   | (0, 4)           | 40       | 15      
+31   | Turn 10 | Runner 1           | MOVE   | (7, 0)           | 40       | 15      
+32   | Turn 10 | Runner 2           | MOVE   | (6, 1)           | 40       | 15      
+33   | Turn 11 | AI Boss            | MOVE   | (0, 3)           | 40       | 15      
+34   | Turn 11 | Runner 1           | MOVE   | (6, 0)           | 40       | 15      
+35   | Turn 11 | Runner 2           | MOVE   | (5, 1)           | 40       | 15      
+36   | Turn 12 | AI Boss            | MOVE   | (0, 2)           | 40       | 15      
+37   | Turn 12 | Runner 1           | MOVE   | (5, 0)           | 40       | 15      
+38   | Turn 12 | Runner 2           | MOVE   | (4, 1)           | 40       | 15      
+39   | Turn 13 | AI Boss            | MOVE   | (0, 1)           | 40       | 15      
+40   | Turn 13 | Runner 1           | MOVE   | (4, 0)           | 40       | 15      
+41   | Turn 13 | Runner 2           | MOVE   | (4, 2)           | 40       | 30      
+42   | Turn 14 | AI Boss            | MOVE   | (1, 1)           | 40       | 30      
+43   | Turn 14 | Runner 1           | MOVE   | (3, 0)           | 40       | 30      
+44   | Turn 14 | Runner 2           | MOVE   | (5, 2)           | 40       | 30      
+45   | Turn 15 | AI Boss            | MOVE   | (1, 0)           | 40       | 30      
+46   | Turn 15 | Runner 1           | MOVE   | (4, 0)           | 40       | 30      
+47   | Turn 15 | Runner 2           | MOVE   | (5, 3)           | 40       | 30      
+48   | Turn 16 | AI Boss            | MOVE   | (2, 0)           | 40       | 30      
+49   | Turn 16 | Runner 1           | MOVE   | (4, 1)           | 40       | 30      
+50   | Turn 16 | Runner 2           | MOVE   | (5, 4)           | 40       | 30      
+51   | Turn 17 | AI Boss            | MOVE   | (3, 0)           | 40       | 30      
+52   | Turn 17 | Runner 1           | MOVE   | (4, 2)           | 40       | 30      
+53   | Turn 17 | Runner 2           | MOVE   | (4, 4)           | 40       | 30      
+54   | Turn 18 | AI Boss            | MOVE   | (3, 1)           | 40       | 30      
+55   | Turn 18 | Runner 1           | MOVE   | (4, 3)           | 40       | 30      
+56   | Turn 18 | Runner 2           | MOVE   | (4, 5)           | 40       | 30      
+57   | Turn 19 | AI Boss            | MOVE   | (3, 2)           | 40       | 30      
+58   | Turn 19 | Runner 1           | MOVE   | (4, 4)           | 40       | 30      
+59   | Turn 19 | Runner 2           | MOVE   | (5, 5)           | 40       | 30      
+60   | Turn 20 | AI Boss            | MOVE   | (3, 3)           | 40       | 30      
+61   | Turn 20 | Runner 1           | MOVE   | (4, 5)           | 40       | 30      
+62   | Turn 20 | Runner 2           | MOVE   | (6, 5)           | 40       | 30      
+63   | Turn 21 | AI Boss            | MOVE   | (3, 4)           | 40       | 30      
+64   | Turn 21 | Runner 1           | MOVE   | (4, 6)           | 40       | 30      
+65   | Turn 21 | Runner 2           | MOVE   | (6, 6)           | 40       | 30      
+66   | Turn 22 | AI Boss            | MOVE   | (3, 5)           | 40       | 30      
+67   | Turn 22 | Runner 1           | MOVE   | (4, 7)           | 40       | 30      
+68   | Turn 22 | Runner 2           | MOVE   | (6, 7)           | 40       | 30      
+69   | Turn 23 | AI Boss            | WALL   | ('H', 4, 7)      | 40       | 30      
+70   | Turn 23 | Runner 1           | MOVE   | (3, 7)           | 40       | 30      
+71   | Turn 23 | Runner 2           | MOVE   | (7, 7)           | 40       | 30      
+72   | Turn 24 | AI Boss            | WALL   | ('H', 7, 7)      | 40       | 30      
+73   | Turn 24 | Runner 1           | MOVE   | (2, 7)           | 40       | 30      
+74   | Turn 24 | Runner 2           | MOVE   | (6, 7)           | 40       | 30      
+75   | Turn 25 | AI Boss            | WALL   | ('V', 6, 7)      | 40       | 30      
+76   | Turn 25 | Runner 1           | MOVE   | (1, 7)           | 40       | 30      
+77   | Turn 25 | Runner 2           | MOVE   | (6, 6)           | 40       | 30      
+78   | Turn 26 | AI Boss            | MOVE   | (3, 6)           | 40       | 30      
+79   | Turn 26 | Runner 1           | MOVE   | (1, 6)           | 40       | 30      
+80   | Turn 26 | Runner 2           | MOVE   | (6, 5)           | 40       | 45      
+81   | Turn 27 | AI Boss            | MOVE   | (2, 6)           | 40       | 45      
+82   | Turn 27 | Runner 1           | MOVE   | (1, 5)           | 40       | 45      
+83   | Turn 27 | Runner 2           | MOVE   | (6, 4)           | 40       | 45      
+84   | Turn 28 | AI Boss            | MOVE   | (1, 6)           | 40       | 45      
+85   | Turn 28 | Runner 1           | MOVE   | (1, 4)           | 40       | 45      
+86   | Turn 28 | Runner 2           | MOVE   | (6, 3)           | 40       | 45      
+87   | Turn 29 | AI Boss            | MOVE   | (1, 5)           | 40       | 45      
+88   | Turn 29 | Runner 1           | MOVE   | (1, 3)           | 40       | 45      
+89   | Turn 29 | Runner 2           | MOVE   | (6, 2)           | 40       | 45      
+90   | Turn 30 | AI Boss            | MOVE   | (1, 4)           | 40       | 45      
+91   | Turn 30 | Runner 1           | MOVE   | (1, 2)           | 40       | 45      
+92   | Turn 30 | Runner 2           | MOVE   | (6, 1)           | 40       | 45      
+93   | Turn 31 | AI Boss            | MOVE   | (1, 3)           | 40       | 45      
+94   | Turn 31 | Runner 1           | MOVE   | (1, 1)           | 40       | 45      
+95   | Turn 31 | Runner 2           | MOVE   | (6, 0)           | 40       | 45      
+96   | Turn 32 | AI Boss            | MOVE   | (1, 2)           | 40       | 45      
+97   | Turn 32 | Runner 1           | MOVE   | (1, 0)           | 40       | 45      
+98   | Turn 32 | Runner 2           | MOVE   | (7, 0)           | 40       | 45      
+99   | Turn 33 | AI Boss            | WALL   | ('V', 7, 0)      | 40       | 45      
+100  | Turn 33 | Runner 1           | MOVE   | (0, 0)           | 40       | 45      
+101  | Turn 33 | Runner 2           | ROPE   | (8, 0)           | 40       | 60      
+102  | Turn 34 | AI Boss            | WALL   | ('V', 0, 0)      | 40       | 75      
+103  | Turn 34 | Runner 1           | MOVE   | (0, 1)           | 40       | 75      
+104  | Turn 34 | Runner 2           | MOVE   | (8, 1)           | 40       | 75      
+105  | Turn 35 | AI Boss            | MOVE   | (1, 1)           | 40       | 75      
+106  | Turn 35 | Runner 1           | MOVE   | (0, 2)           | 40       | 75      
+107  | Turn 35 | Runner 2           | MOVE   | (8, 2)           | 40       | 75      
+108  | Turn 36 | AI Boss            | MOVE   | (0, 1)           | 40       | 75      
+109  | Turn 36 | Runner 1           | MOVE   | (0, 3)           | 40       | 75      
+110  | Turn 36 | Runner 2           | MOVE   | (8, 3)           | 40       | 75      
+111  | Turn 37 | AI Boss            | MOVE   | (0, 2)           | 40       | 75      
+112  | Turn 37 | Runner 1           | MOVE   | (0, 4)           | 40       | 75      
+113  | Turn 37 | Runner 2           | MOVE   | (8, 4)           | 40       | 75      
+114  | Turn 38 | AI Boss            | MOVE   | (0, 3)           | 40       | 75      
+115  | Turn 38 | Runner 1           | MOVE   | (0, 5)           | 40       | 75      
+116  | Turn 38 | Runner 2           | MOVE   | (8, 5)           | 40       | 75      
+117  | Turn 39 | AI Boss            | WALL   | ('H', 0, 5)      | 40       | 75      
+118  | Turn 39 | Runner 1           | MOVE   | (1, 5)           | 40       | 75      
+119  | Turn 39 | Runner 2           | MOVE   | (8, 6)           | 40       | 75      
+120  | Turn 40 | AI Boss            | MOVE   | (0, 4)           | 40       | 75      
+121  | Turn 40 | Runner 1           | MOVE   | (2, 5)           | 40       | 75      
+122  | Turn 40 | Runner 2           | MOVE   | (8, 7)           | 40       | 75      
+123  | Turn 41 | AI Boss            | MOVE   | (0, 5)           | 40       | 90      
+124  | Turn 41 | Runner 1           | MOVE   | (2, 4)           | 40       | 90      
+125  | Turn 41 | Runner 2           | MOVE   | (8, 8)           | 40       | 90      
+126  | Turn 42 | AI Boss            | MOVE   | (1, 5)           | 40       | 105     
+127  | Turn 42 | Runner 1           | MOVE   | (2, 3)           | 40       | 105     
+128  | Turn 42 | Runner 2           | MOVE   | (7, 8)           | 40       | 105     
+129  | Turn 43 | AI Boss            | WALL   | ('V', 2, 3)      | 40       | 120     
+130  | Turn 43 | Runner 1           | MOVE   | (2, 2)           | 40       | 120     
+131  | Turn 43 | Runner 2           | MOVE   | (6, 8)           | 40       | 120     
+132  | Turn 44 | AI Boss            | WALL   | ('H', 2, 1)      | 40       | 120     
+133  | Turn 44 | Runner 1           | MOVE   | (3, 2)           | 40       | 120     
+134  | Turn 44 | Runner 2           | MOVE   | (5, 8)           | 40       | 120     
+135  | Turn 45 | AI Boss            | MOVE   | (2, 5)           | 40       | 120     
+136  | Turn 45 | Runner 1           | MOVE   | (4, 2)           | 40       | 120     
+137  | Turn 45 | Runner 2           | MOVE   | (4, 8)           | 40       | 120     
+138  | Turn 46 | AI Boss            | MOVE   | (2, 6)           | 40       | 120     
+139  | Turn 46 | Runner 1           | MOVE   | (5, 2)           | 40       | 120     
+140  | Turn 46 | Runner 2           | MOVE   | (5, 8)           | 40       | 120     
+141  | Turn 47 | AI Boss            | MOVE   | (3, 6)           | 40       | 120     
+142  | Turn 47 | Runner 1           | MOVE   | (6, 2)           | 40       | 120     
+143  | Turn 47 | Runner 2           | MOVE   | (6, 8)           | 40       | 120     
+144  | Turn 48 | AI Boss            | MOVE   | (4, 6)           | 40       | 120     
+145  | Turn 48 | Runner 1           | MOVE   | (6, 1)           | 40       | 120     
+146  | Turn 48 | Runner 2           | MOVE   | (5, 8)           | 40       | 120     
+147  | Turn 49 | AI Boss            | MOVE   | (5, 6)           | 40       | 120     
+148  | Turn 49 | Runner 1           | MOVE   | (6, 0)           | 40       | 120     
+149  | Turn 49 | Runner 2           | MOVE   | (4, 8)           | 40       | 120     
+150  | Turn 50 | AI Boss            | WALL   | ('H', 6, 0)      | 40       | 120     
+151  | Turn 50 | Runner 1           | MOVE   | (7, 0)           | 40       | 120     
+152  | Turn 50 | Runner 2           | MOVE   | (3, 8)           | 40       | 135     
+153  | Turn 51 | AI Boss            | WALL   | ('V', 7, 0)      | 40       | 135     
+154  | Turn 51 | Runner 1           | MOVE   | (6, 0)           | 40       | 135     
+155  | Turn 51 | Runner 2           | MOVE   | (3, 7)           | 40       | 135     
+156  | Turn 52 | AI Boss            | WALL   | ('H', 6, 0)      | 40       | 135     
+157  | Turn 52 | Runner 1           | MOVE   | (5, 0)           | 40       | 135     
+158  | Turn 52 | Runner 2           | MOVE   | (3, 6)           | 40       | 135     
+159  | Turn 53 | AI Boss            | WALL   | ('H', 4, 0)      | 40       | 135     
+160  | Turn 53 | Runner 1           | MOVE   | (4, 0)           | 40       | 135     
+161  | Turn 53 | Runner 2           | MOVE   | (2, 6)           | 40       | 135     
+162  | Turn 54 | AI Boss            | WALL   | ('H', 2, 6)      | 40       | 135     
+163  | Turn 54 | Runner 1           | MOVE   | (3, 0)           | 40       | 135     
+164  | Turn 54 | Runner 2           | MOVE   | (2, 5)           | 40       | 135     
+165  | Turn 55 | AI Boss            | MOVE   | (5, 5)           | 40       | 135     
+166  | Turn 55 | Runner 1           | MOVE   | (2, 0)           | 40       | 135     
+167  | Turn 55 | Runner 2           | MOVE   | (2, 6)           | 40       | 135     
+168  | Turn 56 | AI Boss            | MOVE   | (4, 5)           | 40       | 135     
+169  | Turn 56 | Runner 1           | MOVE   | (1, 0)           | 40       | 135     
+170  | Turn 56 | Runner 2           | MOVE   | (1, 6)           | 40       | 135     
+171  | Turn 57 | AI Boss            | MOVE   | (3, 5)           | 40       | 135     
+172  | Turn 57 | Runner 1           | MOVE   | (0, 0)           | 40       | 135     
+173  | Turn 57 | Runner 2           | MOVE   | (1, 7)           | 40       | 150     
+174  | Turn 58 | AI Boss            | MOVE   | (2, 5)           | 40       | 150     
+175  | Turn 58 | Runner 1           | MOVE   | (1, 0)           | 40       | 150     
+176  | Turn 58 | Runner 2           | MOVE   | (2, 7)           | 40       | 150     
+177  | Turn 59 | AI Boss            | MOVE   | (2, 6)           | 40       | 150     
+178  | Turn 59 | Runner 1           | MOVE   | (2, 0)           | 40       | 150     
+179  | Turn 59 | Runner 2           | MOVE   | (1, 7)           | 40       | 150     
 ================================================================================

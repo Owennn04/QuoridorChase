@@ -28,12 +28,13 @@ from src.ai.heuristic import evaluate_state
 from src.ai.pathfinding import manhattan_distance
 
 
-def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
+def get_candidate_actions_ai(state, max_walls=4, wall_radius=2, history=None):
     """
     Candidate Move Filtering for AI Boss (Node MAX).
     
     Filters and orders legal actions:
     1. MOVE: Orthogonal adjacent steps (prioritizing steps closer to runners).
+             Includes forward progress bonus & anti-oscillation penalty.
     2. SMASH: Juggernaut Smash if ready (prioritizing smashing toward closest runner).
     3. WALL: Focused 2-tile walls placed within tactical radius around runners
              or intercepting paths to orbs (capped at max_walls).
@@ -42,6 +43,9 @@ def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
     
     r1_pos = state.p_runners[0]
     r2_pos = state.p_runners[1]
+    
+    # Jarak Manhattan terdekat saat ini ke Runner
+    curr_d = min(manhattan_distance(state.p_ai, r1_pos), manhattan_distance(state.p_ai, r2_pos))
     
     # --- 1. MOVE Actions ---
     valid_steps = get_valid_steps(state, state.p_ai)
@@ -52,6 +56,18 @@ def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
         else:
             d = min(manhattan_distance(step, r1_pos), manhattan_distance(step, r2_pos))
             priority = 100.0 - d
+
+            # Insentif Pergerakan Maju (Forward Progress Bonus)
+            if d < curr_d:
+                priority += 20.0  # Aktif memotong jarak ke runner
+
+            # Penalti Anti-Osilasi (Anti-Loop Penalty)
+            if history:
+                if len(history) >= 2 and step == history[-2]:
+                    priority -= 80.0  # Penalti berat bolak-balik ke petak 1 langkah sebelumnya
+                elif step in history[-4:]:
+                    priority -= 30.0  # Penalti sedang jika petak ada di 4 langkah terakhir
+
         actions.append((priority, ("MOVE", step)))
 
     # --- 2. SMASH Actions ---
@@ -61,8 +77,15 @@ def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
             priority = 1000.0  # Immediate smash tag!
         else:
             d = min(manhattan_distance(dest, r1_pos), manhattan_distance(dest, r2_pos))
-            curr_d = min(manhattan_distance(state.p_ai, r1_pos), manhattan_distance(state.p_ai, r2_pos))
             priority = 110.0 - d if d < curr_d else 80.0 - d
+
+            # Penalti Anti-Osilasi untuk Smash jika dest adalah petak yang baru ditinggalkan
+            if history:
+                if len(history) >= 2 and dest == history[-2]:
+                    priority -= 80.0
+                elif dest in history[-4:]:
+                    priority -= 30.0
+
         actions.append((priority, ("SMASH", dest)))
 
     # --- 3. Candidate WALL Actions (Filtered) ---
@@ -90,7 +113,14 @@ def get_candidate_actions_ai(state, max_walls=4, wall_radius=2):
                             dist_to_runner = min(
                                 abs(x - tx) + abs(y - ty) for tx, ty in focus_targets
                             )
-                            score = 50.0 - dist_to_runner
+                            # Nilai dasar tembok berdasarkan kedekatan dengan target runner
+                            score = 70.0 - dist_to_runner
+                            
+                            # Tembok Intersepsi: Jika runner berada dalam radius kejar (<= 3 langkah),
+                            # prioritaskan tembok taktis yang dipasang dekat dengan runner untuk memotong jalur
+                            if curr_d <= 3 and dist_to_runner <= 2:
+                                score += 35.0  # Mencapai ~103, bersaing kuat dengan langkah MOVE
+                                
                             candidate_walls.append((score, ("WALL", wall_key)))
                             
         candidate_walls.sort(key=lambda item: item[0], reverse=True)
@@ -235,7 +265,7 @@ class MinimaxAgent:
         return "Alpha-Beta Pruning" if self.use_alpha_beta else "Pure Minimax"
 
     # --- Search Execution ---
-    def choose_action(self, state, depth=None):
+    def choose_action(self, state, depth=None, history=None):
         """
         Main decision-making function for AI Boss.
         Returns (best_action, best_evaluation_score).
@@ -246,9 +276,9 @@ class MinimaxAgent:
         t_start = time.perf_counter()
 
         if self.use_alpha_beta:
-            best_action, best_val = self._minimax_alpha_beta_root(state, search_depth)
+            best_action, best_val = self._minimax_alpha_beta_root(state, search_depth, history=history)
         else:
-            best_action, best_val = self._minimax_pure_root(state, search_depth)
+            best_action, best_val = self._minimax_pure_root(state, search_depth, history=history)
 
         self.metrics.execution_time_ms = (time.perf_counter() - t_start) * 1000.0
         return best_action, best_val
@@ -257,9 +287,9 @@ class MinimaxAgent:
     # Mode 1: Pure Minimax (Without Pruning)
     # =========================================================================
 
-    def _minimax_pure_root(self, state, depth):
+    def _minimax_pure_root(self, state, depth, history=None):
         self.metrics.nodes_explored += 1
-        actions = self._get_actions(state, is_max=True)
+        actions = self._get_actions(state, is_max=True, history=history)
         if not actions or depth == 0 or state.is_terminal():
             return None, self.eval_fn(state)
 
@@ -269,8 +299,18 @@ class MinimaxAgent:
         for action in actions:
             succ = apply_action(state, action, is_max=True)
             val = self._minimax_pure(succ, depth - 1, is_max=False)
-            if val > best_val:
-                best_val = val
+
+            # Anti-Oscillation tie-breaker penalty di tingkat root
+            score = val
+            if history and action[0] in ("MOVE", "SMASH"):
+                dest = action[1]
+                if len(history) >= 2 and dest == history[-2]:
+                    score -= 80.0
+                elif dest in history[-4:]:
+                    score -= 30.0
+
+            if score > best_val:
+                best_val = score
                 best_action = action
 
         return best_action, best_val
@@ -301,24 +341,37 @@ class MinimaxAgent:
     # Mode 2: Alpha-Beta Pruning Minimax
     # =========================================================================
 
-    def _minimax_alpha_beta_root(self, state, depth):
+    def _minimax_alpha_beta_root(self, state, depth, history=None):
         self.metrics.nodes_explored += 1
-        actions = self._get_actions(state, is_max=True)
+        actions = self._get_actions(state, is_max=True, history=history)
         if not actions or depth == 0 or state.is_terminal():
             return None, self.eval_fn(state)
 
         best_action = None
+        best_val = -math.inf
         alpha = -math.inf
         beta = math.inf
 
         for action in actions:
             succ = apply_action(state, action, is_max=True)
             val = self._alpha_beta(succ, depth - 1, alpha, beta, is_max=False)
-            if val > alpha:
-                alpha = val
+
+            # Anti-Oscillation tie-breaker penalty di tingkat root
+            score = val
+            if history and action[0] in ("MOVE", "SMASH"):
+                dest = action[1]
+                if len(history) >= 2 and dest == history[-2]:
+                    score -= 80.0
+                elif dest in history[-4:]:
+                    score -= 30.0
+
+            if score > best_val:
+                best_val = score
                 best_action = action
 
-        return best_action, alpha
+            alpha = max(alpha, val)
+
+        return best_action, best_val
 
     def _alpha_beta(self, state, depth, alpha, beta, is_max):
         self.metrics.nodes_explored += 1
@@ -350,11 +403,11 @@ class MinimaxAgent:
     # Action Generation & Candidate Filtering
     # =========================================================================
 
-    def _get_actions(self, state, is_max):
+    def _get_actions(self, state, is_max, history=None):
         """Generate candidate actions according to configuration."""
         if is_max:
             if self.use_candidate_filtering:
-                return get_candidate_actions_ai(state, max_walls=4, wall_radius=2)
+                return get_candidate_actions_ai(state, max_walls=4, wall_radius=2, history=history)
             else:
                 acts = []
                 for s in get_valid_steps(state, state.p_ai):

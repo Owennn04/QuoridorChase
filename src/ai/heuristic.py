@@ -8,7 +8,36 @@ from .pathfinding import skill_aware_a_star
 from engine.rules import get_valid_steps
 
 def calculate_confinement(state, start_pos, max_depth=15):
-    """Algoritma Flood-Fill untuk menghitung luas area yang bisa diakses Runner."""
+    """
+    Algoritma Flood-Fill untuk menghitung luas area yang bisa diakses Runner.
+    Hanya menghitung kurungan jika runner benar-benar terhalang oleh tembok fisik,
+    bukan hanya karena berdiri di pinggir atau sudut batas grid arena (False Confinement).
+    """
+    # 1. Jika tidak ada tembok aktif sama sekali di papan, tidak ada kurungan
+    walls = state.all_walls()
+    if not walls:
+        return 0
+
+    # 2. Periksa apakah ada tembok dalam radius interaksi dekat dengan start_pos (radius <= 2)
+    sx, sy = start_pos
+    has_nearby_wall = False
+    for (c1, c2) in walls:
+        if (abs(c1[0] - sx) + abs(c1[1] - sy) <= 2) or (abs(c2[0] - sx) + abs(c2[1] - sy) <= 2):
+            has_nearby_wall = True
+            break
+
+    if not has_nearby_wall:
+        return 0
+
+    # 3. Hitung hambatan arah langkah langsung akibat tembok (immediate mobility restriction)
+    blocked_by_wall = 0
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nx, ny = sx + dx, sy + dy
+        if 0 <= nx < state.grid_size and 0 <= ny < state.grid_size:
+            if state.is_blocked(start_pos, (nx, ny)):
+                blocked_by_wall += 1
+
+    # 4. Hitung Flood-Fill jika memang terdeteksi ada tembok di dekat pemain
     visited = set([start_pos])
     queue = [start_pos]
     
@@ -20,7 +49,8 @@ def calculate_confinement(state, start_pos, max_depth=15):
                 queue.append(next_pos)
                 
     # Semakin sedikit sel yang bisa diakses, semakin tinggi nilai kurungannya
-    return max_depth - len(visited)
+    flood_confinement = max_depth - len(visited)
+    return flood_confinement + (blocked_by_wall * 2)
 
 def evaluate_state(state):
     """

@@ -439,7 +439,7 @@ class GameUI:
             return
 
         t_start = time.perf_counter()
-        best_act, best_val = self.ai_agent.choose_action(self.state)
+        best_act, best_val = self.ai_agent.choose_action(self.state, history=self.ai_history)
         t_elapsed = (time.perf_counter() - t_start) * 1000.0
 
         if best_act is None:
@@ -462,6 +462,15 @@ class GameUI:
         # Eksekusi aksi AI pada game state
         act_type, payload = best_act
         self.state = apply_ai_action(self.state, best_act)
+
+        # Catat aksi AI ke riwayat pertandingan & telemetry stream
+        self.record_move("AI Boss", act_type, payload, details=self.last_ai_metrics)
+
+        # Update riwayat posisi AI untuk Anti-Osilasi
+        if act_type in ("MOVE", "SMASH"):
+            self.ai_history.append(payload)
+            if len(self.ai_history) > 12:
+                self.ai_history.pop(0)
 
         if act_type == "MOVE":
             self.log_message(f"AI Boss melangkah ke {payload}.")
