@@ -15,39 +15,14 @@ Handles:
 
 from typing import Tuple, Optional
 
-try:
-    from config import (
-        SMASH_COOLDOWN_RESET,
-        SOLO_WALL_LIFETIME,
-        POINTS_AI_TAG,
-        POINTS_RUNNER_ORB
-    )
-except ImportError:
-    try:
-        from ..config import (
-            SMASH_COOLDOWN_RESET,
-            SOLO_WALL_LIFETIME,
-            POINTS_AI_TAG,
-            POINTS_RUNNER_ORB
-        )
-    except ImportError:
-        from quoridor_chase.config import (
-            SMASH_COOLDOWN_RESET,
-            SOLO_WALL_LIFETIME,
-            POINTS_AI_TAG,
-            POINTS_RUNNER_ORB
-        )
-
-try:
-    from engine.state import GameState, Cell, WallEdge, canonical_edge
-    from engine.rules import wall_to_edges
-except ImportError:
-    try:
-        from .state import GameState, Cell, WallEdge, canonical_edge
-        from .rules import wall_to_edges
-    except ImportError:
-        from state import GameState, Cell, WallEdge, canonical_edge
-        from rules import wall_to_edges
+from config import (
+    SMASH_COOLDOWN_RESET,
+    SOLO_WALL_LIFETIME,
+    POINTS_AI_TAG,
+    POINTS_RUNNER_ORB
+)
+from engine.state import GameState, Cell, WallEdge, canonical_edge
+from engine.rules import wall_to_edges
 
 Action = Tuple[str, any]
 

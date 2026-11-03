@@ -13,13 +13,7 @@ Covers:
 from collections import deque
 from typing import List, Tuple, Optional, Set
 
-try:
-    from engine.state import GameState, Cell, WallEdge, canonical_edge
-except ImportError:
-    try:
-        from .state import GameState, Cell, WallEdge, canonical_edge
-    except ImportError:
-        from state import GameState, Cell, WallEdge, canonical_edge
+from engine.state import GameState, Cell, WallEdge, canonical_edge
 
 Action = Tuple[str, any]
 

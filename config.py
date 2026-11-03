@@ -47,7 +47,6 @@ UTILITY_AI_WIN = 1000.0
 UTILITY_RUNNER_WIN = -1000.0
 UTILITY_DRAW = 0.0
 
-# UI Design Tokens (Reference: https://ucking.vercel.app/)
 THEME_TOKENS = {
     "paper": "#f3efe5",
     "ink": "#18241f",

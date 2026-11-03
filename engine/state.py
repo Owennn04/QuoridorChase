@@ -14,58 +14,22 @@ from __future__ import annotations
 import random
 from typing import Tuple, List, Dict, Set, Optional, Generator
 
-try:
-    from config import (
-        GRID_SIZE,
-        AI_START_POS,
-        RUNNER_START_POSITIONS,
-        RESPAWN_CANDIDATE_CORNERS,
-        SMASH_COOLDOWN_INITIAL,
-        INITIAL_RUNNER_ROPES,
-        ACTIVE_ORB_TARGET_COUNT,
-        MATCH_DURATION_SECONDS,
-        MAX_SIMULATION_TURNS,
-        UTILITY_AI_WIN,
-        UTILITY_RUNNER_WIN,
-        UTILITY_DRAW,
-        POINTS_AI_TAG,
-        POINTS_RUNNER_ORB
-    )
-except ImportError:
-    try:
-        from ..config import (
-            GRID_SIZE,
-            AI_START_POS,
-            RUNNER_START_POSITIONS,
-            RESPAWN_CANDIDATE_CORNERS,
-            SMASH_COOLDOWN_INITIAL,
-            INITIAL_RUNNER_ROPES,
-            ACTIVE_ORB_TARGET_COUNT,
-            MATCH_DURATION_SECONDS,
-            MAX_SIMULATION_TURNS,
-            UTILITY_AI_WIN,
-            UTILITY_RUNNER_WIN,
-            UTILITY_DRAW,
-            POINTS_AI_TAG,
-            POINTS_RUNNER_ORB
-        )
-    except ImportError:
-        from quoridor_chase.config import (
-            GRID_SIZE,
-            AI_START_POS,
-            RUNNER_START_POSITIONS,
-            RESPAWN_CANDIDATE_CORNERS,
-            SMASH_COOLDOWN_INITIAL,
-            INITIAL_RUNNER_ROPES,
-            ACTIVE_ORB_TARGET_COUNT,
-            MATCH_DURATION_SECONDS,
-            MAX_SIMULATION_TURNS,
-            UTILITY_AI_WIN,
-            UTILITY_RUNNER_WIN,
-            UTILITY_DRAW,
-            POINTS_AI_TAG,
-            POINTS_RUNNER_ORB
-        )
+from config import (
+    GRID_SIZE,
+    AI_START_POS,
+    RUNNER_START_POSITIONS,
+    RESPAWN_CANDIDATE_CORNERS,
+    SMASH_COOLDOWN_INITIAL,
+    INITIAL_RUNNER_ROPES,
+    ACTIVE_ORB_TARGET_COUNT,
+    MATCH_DURATION_SECONDS,
+    MAX_SIMULATION_TURNS,
+    UTILITY_AI_WIN,
+    UTILITY_RUNNER_WIN,
+    UTILITY_DRAW,
+    POINTS_AI_TAG,
+    POINTS_RUNNER_ORB
+)
 
 Cell = Tuple[int, int]
 WallEdge = Tuple[Cell, Cell]
@@ -314,10 +278,7 @@ class GameState:
 
     def apply_action(self, action, is_max: Optional[bool] = None) -> GameState:
         """Execute action via Transition Model T(s, a)."""
-        try:
-            from engine.transition import apply_action as _apply_action
-        except ImportError:
-            from .transition import apply_action as _apply_action
+        from engine.transition import apply_action as _apply_action
         return _apply_action(self, action, is_max=is_max)
 
     def to_dict(self) -> dict:

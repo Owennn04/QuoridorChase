@@ -18,70 +18,26 @@ import time
 import math
 from typing import Tuple, List, Dict, Optional, Callable, Any
 
-try:
-    from engine.state import GameState, Cell, WallEdge, canonical_edge
-    from engine.rules import (
-        get_valid_steps,
-        can_wall_jump,
-        can_juggernaut_smash,
-        is_valid_2tile_wall,
-        validate_no_complete_cage_edges,
-        wall_to_edges
-    )
-    from engine.transition import apply_action, apply_ai_action, apply_team_runners_action
-    from config import (
-        GRID_SIZE,
-        UTILITY_AI_WIN,
-        UTILITY_RUNNER_WIN,
-        UTILITY_DRAW,
-        POINTS_AI_TAG,
-        POINTS_RUNNER_ORB
-    )
-    from src.ai.heuristic import evaluate_state
-    from src.ai.pathfinding import manhattan_distance
-except ImportError:
-    try:
-        from ...engine.state import GameState, Cell, WallEdge, canonical_edge
-        from ...engine.rules import (
-            get_valid_steps,
-            can_wall_jump,
-            can_juggernaut_smash,
-            is_valid_2tile_wall,
-            validate_no_complete_cage_edges,
-            wall_to_edges
-        )
-        from ...engine.transition import apply_action, apply_ai_action, apply_team_runners_action
-        from ...config import (
-            GRID_SIZE,
-            UTILITY_AI_WIN,
-            UTILITY_RUNNER_WIN,
-            UTILITY_DRAW,
-            POINTS_AI_TAG,
-            POINTS_RUNNER_ORB
-        )
-        from .heuristic import evaluate_state
-        from .pathfinding import manhattan_distance
-    except ImportError:
-        from engine.state import GameState, Cell, WallEdge, canonical_edge
-        from engine.rules import (
-            get_valid_steps,
-            can_wall_jump,
-            can_juggernaut_smash,
-            is_valid_2tile_wall,
-            validate_no_complete_cage_edges,
-            wall_to_edges
-        )
-        from engine.transition import apply_action, apply_ai_action, apply_team_runners_action
-        from config import (
-            GRID_SIZE,
-            UTILITY_AI_WIN,
-            UTILITY_RUNNER_WIN,
-            UTILITY_DRAW,
-            POINTS_AI_TAG,
-            POINTS_RUNNER_ORB
-        )
-        from src.ai.heuristic import evaluate_state
-        from src.ai.pathfinding import manhattan_distance
+from engine.state import GameState, Cell, WallEdge, canonical_edge
+from engine.rules import (
+    get_valid_steps,
+    can_wall_jump,
+    can_juggernaut_smash,
+    is_valid_2tile_wall,
+    validate_no_complete_cage_edges,
+    wall_to_edges
+)
+from engine.transition import apply_action, apply_ai_action, apply_team_runners_action
+from config import (
+    GRID_SIZE,
+    UTILITY_AI_WIN,
+    UTILITY_RUNNER_WIN,
+    UTILITY_DRAW,
+    POINTS_AI_TAG,
+    POINTS_RUNNER_ORB
+)
+from src.ai.heuristic import evaluate_state
+from src.ai.pathfinding import manhattan_distance
 
 Action = Tuple[str, Any]
 
