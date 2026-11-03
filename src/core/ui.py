@@ -133,6 +133,45 @@ class GameUI:
             "time_ms": 0.0
         }
 
+        # Riwayat Pertandingan Lengkap & Anti-Looping Memory
+        self.match_history = []
+        self.r1_history = [self.state.p_runners[0]]
+        self.r2_history = [self.state.p_runners[1]]
+        self.ai_history = [self.state.p_ai]
+        self.log_exported = False
+
+    def record_move(self, agent_name, act_type, payload):
+        """Mencatat aksi ke riwayat pertandingan."""
+        self.match_history.append((
+            self.state.turn_count,
+            agent_name,
+            act_type,
+            payload,
+            self.state.score_ai,
+            self.state.score_runners
+        ))
+
+    def export_match_log(self, filepath="match_history.txt"):
+        """Menyimpan seluruh riwayat pertandingan ke file teks."""
+        try:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write("=" * 75 + "\n")
+                f.write("       QUORIDOR CHASE: LOCKDOWN - RIWAYAT PERTANDINGAN LENGKAP\n")
+                f.write("=" * 75 + "\n")
+                f.write(f"Waktu Export     : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Skor Akhir       : AI Boss = {self.state.score_ai} pts | Runners = {self.state.score_runners} pts\n")
+                f.write(f"Pemenang         : {self.state.winner if self.state.winner else 'Sedang Berjalan'}\n")
+                f.write(f"Total Langkah    : {len(self.match_history)} aksi dicatat\n")
+                f.write("-" * 75 + "\n")
+                f.write(f"{'No':<4} | {'Turn':<7} | {'Agen':<10} | {'Aksi':<6} | {'Target / Posisi':<18} | {'Skor AI':<8} | {'Skor R':<8}\n")
+                f.write("-" * 75 + "\n")
+                for idx, (turn, agent, act, pos, sc_ai, sc_r) in enumerate(self.match_history, 1):
+                    f.write(f"{idx:<4} | Turn {turn:<2} | {agent:<10} | {act:<6} | {str(pos):<18} | {sc_ai:<8} | {sc_r:<8}\n")
+                f.write("=" * 75 + "\n")
+            self.log_message(f"Log tersimpan di: {filepath}")
+        except Exception as e:
+            self.log_message(f"Gagal simpan log: {e}")
+
     # =========================================================================
     # Helper Koordinat & Hit-Testing
     # =========================================================================
@@ -196,7 +235,13 @@ class GameUI:
             jump_moves = can_wall_jump(self.state, runner_idx)
             valid_destinations = [dest for dest, _ in jump_moves]
             if target_cell in valid_destinations:
+                self.record_move(f"Runner {runner_idx+1}", "ROPE", target_cell)
                 self.state = apply_runner_action(self.state, runner_idx, ("ROPE", target_cell))
+                # Update history posisi
+                h = self.r1_history if runner_idx == 0 else self.r2_history
+                h.append(target_cell)
+                if len(h) > 6:
+                    h.pop(0)
                 self.log_message(f"Runner {runner_idx+1} melompati tembok pakai Rope ke {target_cell}!")
                 self.rope_mode = False
                 self._advance_runner_turn()
@@ -213,7 +258,13 @@ class GameUI:
                 self.log_message(f"Petak {target_cell} sudah ditempati rekan Runner {other_idx+1}!")
                 return
 
+            self.record_move(f"Runner {runner_idx+1}", "MOVE", target_cell)
             self.state = apply_runner_action(self.state, runner_idx, ("MOVE", target_cell))
+            # Update history posisi
+            h = self.r1_history if runner_idx == 0 else self.r2_history
+            h.append(target_cell)
+            if len(h) > 6:
+                h.pop(0)
             self.log_message(f"Runner {runner_idx+1} melangkah ke {target_cell}.")
             self._advance_runner_turn()
         else:
@@ -235,6 +286,7 @@ class GameUI:
         orient = self.wall_orient
 
         if is_valid_2tile_wall(self.state, orient, r, c):
+            self.record_move(f"Runner {runner_idx+1}", "WALL", (orient, r, c))
             self.state = apply_runner_action(self.state, runner_idx, ("WALL", (orient, r, c)))
             self.log_message(f"Runner {runner_idx+1} memasang tembok {orient} di ({r}, {c})!")
             self.wall_mode = False
@@ -271,41 +323,89 @@ class GameUI:
             self.log_message("Giliran Tim Runners selesai. AI Boss sedang berpikir...")
 
     def execute_ai_turn(self):
-        """Mengeksekusi giliran AI Boss menggunakan Minimax / Alpha-Beta Pruning."""
+        """Mengeksekusi giliran AI Boss menggunakan Minimax / Alpha-Beta Pruning (2 aksi berturut-turut)."""
         if self.state.is_game_over or self.state.current_turn != "AI":
             return
 
-        t_start = time.perf_counter()
-        best_act, best_val = self.ai_agent.choose_action(self.state)
-        t_elapsed = (time.perf_counter() - t_start) * 1000.0
+        actions_taken = []
+        total_elapsed = 0.0
+        total_nodes = 0
+        total_cutoffs = 0
+        last_eval = 0.0
 
-        if best_act is None:
-            # Fallback jika tidak ada aksi
-            valid = get_valid_steps(self.state, self.state.p_ai)
-            best_act = ("MOVE", valid[0]) if valid else ("MOVE", self.state.p_ai)
-            best_val = 0.0
+        # AI Boss melakukan 2 aksi berturut-turut
+        for step_i in range(1, 3):
+            if self.state.is_game_over:
+                break
 
-        # Simpan telemetri pencarian
-        metrics = self.ai_agent.metrics.to_dict()
+            t_start = time.perf_counter()
+            best_act, best_val = self.ai_agent.choose_action(self.state)
+            t_elapsed = (time.perf_counter() - t_start) * 1000.0
+
+            if best_act is None:
+                # Fallback jika tidak ada aksi
+                valid = get_valid_steps(self.state, self.state.p_ai)
+                best_act = ("MOVE", valid[0]) if valid else ("MOVE", self.state.p_ai)
+                best_val = 0.0
+
+            # Akumulasi telemetri pencarian
+            metrics = self.ai_agent.metrics.to_dict()
+            total_elapsed += t_elapsed
+            total_nodes += metrics["nodes_explored"]
+            total_cutoffs += metrics["cutoffs"]
+            last_eval = best_val
+
+            act_type, payload = best_act
+
+            # Anti-Looping AI: Jika AI memilih kembali ke petak 1 langkah lalu (dan bukan sedang nangkep runner)
+            if act_type == "MOVE" and len(self.ai_history) >= 1 and payload == self.ai_history[-1]:
+                is_tag = (payload in self.state.p_runners)
+                if not is_tag:
+                    valid_moves = get_valid_steps(self.state, self.state.p_ai)
+                    alt_moves = [s for s in valid_moves if s != self.ai_history[-1]]
+                    if alt_moves:
+                        r1_p, r2_p = self.state.p_runners
+                        alt_best = min(alt_moves, key=lambda s: min(manhattan_distance(s, r1_p), manhattan_distance(s, r2_p)))
+                        d_alt = min(manhattan_distance(alt_best, r1_p), manhattan_distance(alt_best, r2_p))
+                        d_orig = min(manhattan_distance(payload, r1_p), manhattan_distance(payload, r2_p))
+                        if d_alt <= d_orig + 1:
+                            best_act = ("MOVE", alt_best)
+                            act_type, payload = best_act
+
+            actions_taken.append(best_act)
+
+            # Catat aksi ke log riwayat pertandingan
+            self.record_move("AI Boss", act_type, payload)
+            if act_type == "MOVE":
+                self.ai_history.append(payload)
+                if len(self.ai_history) > 6:
+                    self.ai_history.pop(0)
+
+            # Eksekusi aksi AI pada game state
+            self.state = apply_ai_action(self.state, best_act)
+
+            if act_type == "MOVE":
+                self.log_message(f"AI Boss (Aksi {step_i}/2): Melangkah ke {payload}.")
+            elif act_type == "SMASH":
+                self.log_message(f"AI Boss (Aksi {step_i}/2): SMASH ke {payload}!")
+            elif act_type == "WALL":
+                self.log_message(f"AI Boss (Aksi {step_i}/2): Pasang tembok di {payload}!")
+
+            # Render visual langkah pertama dengan jeda 200ms agar pergerakannya terlihat jelas oleh pemain
+            if step_i == 1 and not self.state.is_game_over:
+                self.draw(pygame.mouse.get_pos())
+                pygame.time.delay(200)
+                self.state.current_turn = "AI"
+
+        # Simpan telemetri pencarian gabungan
         self.last_ai_metrics = {
             "mode": self.ai_agent.mode_name,
-            "action": best_act,
-            "eval": best_val,
-            "nodes": metrics["nodes_explored"],
-            "cutoffs": metrics["cutoffs"],
-            "time_ms": round(t_elapsed, 1)
+            "action": f"{len(actions_taken)}x: " + ", ".join([f"{a[0]}" for a in actions_taken]),
+            "eval": last_eval,
+            "nodes": total_nodes,
+            "cutoffs": total_cutoffs,
+            "time_ms": round(total_elapsed, 1)
         }
-
-        # Eksekusi aksi AI pada game state
-        act_type, payload = best_act
-        self.state = apply_ai_action(self.state, best_act)
-
-        if act_type == "MOVE":
-            self.log_message(f"AI Boss melangkah ke {payload}.")
-        elif act_type == "SMASH":
-            self.log_message(f"AI Boss MENGHANCURKAN TEMBOK dengan Smash ke {payload}!")
-        elif act_type == "WALL":
-            self.log_message(f"AI Boss memasang tembok di {payload}!")
 
         # Kembalikan giliran ke Runner 1
         self.state.current_turn = "R1"
@@ -320,6 +420,7 @@ class GameUI:
             r_idx = 0 if self.state.current_turn == "R1" else 1
             r_pos = self.state.p_runners[r_idx]
             ai_pos = self.state.p_ai
+            recent = self.r1_history if r_idx == 0 else self.r2_history
 
             # Pilih langkah terbaik untuk runner: menjauhi AI & mendekati Orb
             valid = get_valid_steps(self.state, r_pos)
@@ -327,9 +428,20 @@ class GameUI:
                 def score_step(step):
                     d_ai = manhattan_distance(step, ai_pos)
                     d_orb = min([manhattan_distance(step, o) for o in self.state.orbs]) if self.state.orbs else 5
-                    return (d_ai * 2.5) - (d_orb * 1.5)
+                    score = (d_ai * 2.5) - (d_orb * 1.5)
+                    # Anti-Oscillation: Beri penalti keras jika kembali ke petak 1 langkah lalu
+                    if len(recent) >= 1 and step == recent[-1]:
+                        score -= 25.0
+                    elif len(recent) >= 2 and step in recent[-4:]:
+                        score -= 10.0
+                    return score
 
                 best_step = max(valid, key=score_step)
+                self.record_move(f"Runner {r_idx+1}", "MOVE", best_step)
+                recent.append(best_step)
+                if len(recent) > 6:
+                    recent.pop(0)
+
                 self.state = apply_runner_action(self.state, r_idx, ("MOVE", best_step))
                 self.log_message(f"Runner {r_idx+1} melangkah otomatis ke {best_step}.")
             self._advance_runner_turn()
@@ -656,6 +768,7 @@ class GameUI:
             ("Tombol [SPASI]", "Langkah Manual"),
             ("Tombol [P]", f"Auto-Play ({'ON' if self.auto_play else 'OFF'})"),
             ("Tombol [A]", f"Toggle Alpha-Beta"),
+            ("Tombol [L]", "Simpan Riwayat ke File"),
             ("Tombol [F1]", "Reset Ulang Permainan")
         ]
         for key, desc in controls:
@@ -687,6 +800,11 @@ class GameUI:
         self.screen.blit(txt_res, (cx - (txt_res.get_width() // 2), cy + 30))
         self.screen.blit(txt_score, (cx - (txt_score.get_width() // 2), cy + 55))
         self.screen.blit(txt_prompt, (cx - (txt_prompt.get_width() // 2), cy + 85))
+
+        # Auto-export riwayat pertandingan saat game selesai
+        if not self.log_exported and len(self.match_history) > 0:
+            self.export_match_log("match_history.txt")
+            self.log_exported = True
 
     # =========================================================================
     # Game Loop Utama
@@ -729,7 +847,16 @@ class GameUI:
                         self.wall_mode = False
                         self.rope_mode = False
                         self.auto_play = False
+                        self.match_history = []
+                        self.r1_history = [self.state.p_runners[0]]
+                        self.r2_history = [self.state.p_runners[1]]
+                        self.ai_history = [self.state.p_ai]
+                        self.log_exported = False
                         self.log_message("Permainan di-reset ke kondisi awal S0.")
+
+                    # Simpan / Export Log Pertandingan (L)
+                    elif event.key == pygame.K_l:
+                        self.export_match_log("match_history.txt")
 
                     # Toggle Wall Mode (W)
                     elif event.key == pygame.K_w:
