@@ -1,0 +1,20 @@
+================================================================================
+       QUORIDOR CHASE: LOCKDOWN - RIWAYAT PERTANDINGAN LENGKAP
+================================================================================
+Waktu Export     : 2026-11-03 19:29:36
+Skor Akhir       : AI Boss = 0 pts | Runners = 15 pts
+Pemenang         : Sedang Berjalan
+Total Langkah    : 8 aksi dicatat
+Log Pergerakan   : logs/movement_history.log
+--------------------------------------------------------------------------------
+No   | Turn    | Agen               | Aksi   | Target / Posisi  | Skor AI  | Skor R  
+--------------------------------------------------------------------------------
+1    | Turn 0  | Runner 1           | MOVE   | (0, 3)           | 0        | 0       
+2    | Turn 0  | Runner 2           | MOVE   | (8, 3)           | 0        | 15      
+3    | Turn 1  | AI Boss (Step 1/2) | MOVE   | (4, 3)           | 0        | 15      
+4    | Turn 1  | AI Boss (Step 2/2) | MOVE   | (3, 3)           | 0        | 15      
+5    | Turn 1  | Runner 1           | MOVE   | (0, 2)           | 0        | 15      
+6    | Turn 1  | Runner 2           | MOVE   | (8, 2)           | 0        | 15      
+7    | Turn 2  | AI Boss (Step 1/2) | MOVE   | (3, 2)           | 0        | 15      
+8    | Turn 2  | AI Boss (Step 2/2) | WALL   | ('H', 0, 2)      | 0        | 15      
+================================================================================

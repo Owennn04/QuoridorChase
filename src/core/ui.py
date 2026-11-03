@@ -139,12 +139,48 @@ class GameUI:
         self.r1_history = [self.state.p_runners[0]]
         self.r2_history = [self.state.p_runners[1]]
         self.ai_history = [self.state.p_ai]
+        self.ai_wall_history = []
         self.log_exported = False
 
-    def record_move(self, agent_name, act_type, payload):
-        """Mencatat aksi ke riwayat pertandingan."""
+        # Inisialisasi Berkas Log Pergerakan & Diagnostik Real-Time
+        self.log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs")
+        self.movement_log_path = os.path.join(self.log_dir, "movement_history.log")
+        self.init_movement_log()
+
+    def init_movement_log(self):
+        """Inisialisasi file log pergerakan dengan header sesi baru."""
+        try:
+            os.makedirs(self.log_dir, exist_ok=True)
+            with open(self.movement_log_path, "a", encoding="utf-8") as f:
+                f.write("\n" + "=" * 80 + "\n")
+                f.write("       QUORIDOR CHASE: LOCKDOWN - LOG PERGERAKAN & DIAGNOSTIK SESI\n")
+                f.write("=" * 80 + "\n")
+                f.write(f"Waktu Sesi Dimulai : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Ukuran Grid        : {GRID_SIZE}x{GRID_SIZE}\n")
+                f.write(f"Posisi Awal AI     : {self.state.p_ai}\n")
+                f.write(f"Posisi Awal R1/R2  : R1={self.state.p_runners[0]}, R2={self.state.p_runners[1]}\n")
+                f.write(f"Data Orbs Awal     : {list(self.state.orbs)}\n")
+                f.write(f"Mode AI Awal       : {self.ai_agent.mode_name} (Depth {self.ai_agent.depth_limit})\n")
+                f.write("-" * 80 + "\n")
+                f.write("Format Catatan Log:\n")
+                f.write("[Waktu | Turn] Agen -> Aksi (Posisi / Koordinat)\n")
+                f.write("  Snapshot     : Posisi AI & Runners, Jarak ke Target, Skor, Sisa Orbs\n")
+                f.write("  Telemetri AI : Evaluasi h(s), Nodes diuji, Pruning Cutoffs, Latensi (ms)\n")
+                f.write("  [ALERT]      : Deteksi Pengulangan Gerakan & Analisis Penyebab\n")
+                f.write("=" * 80 + "\n\n")
+        except Exception as e:
+            print(f"Gagal inisialisasi movement log: {e}")
+
+    def record_move(self, agent_name, act_type, payload, details=None, alert_info=None):
+        """
+        Mencatat aksi secara real-time ke memori dan streaming langsung ke logs/movement_history.log.
+        """
+        curr_turn = self.state.turn_count
+        timestamp = time.strftime("%H:%M:%S")
+
+        # Simpan ke riwayat memori pertandingan
         self.match_history.append((
-            self.state.turn_count,
+            curr_turn,
             agent_name,
             act_type,
             payload,
@@ -152,23 +188,62 @@ class GameUI:
             self.state.score_runners
         ))
 
-    def export_match_log(self, filepath="match_history.txt"):
-        """Menyimpan seluruh riwayat pertandingan ke file teks."""
+        # Tulis langsung ke file movement_history.log (streaming real-time)
+        try:
+            with open(self.movement_log_path, "a", encoding="utf-8") as f:
+                f.write(f"[{timestamp} | Turn {curr_turn:02d}] {agent_name:<18} -> {act_type:<5} {str(payload)}\n")
+
+                # Snapshot posisi agen & jarak
+                p_ai = self.state.p_ai
+                p_r1 = self.state.p_runners[0]
+                p_r2 = self.state.p_runners[1]
+                d_r1 = manhattan_distance(p_ai, p_r1)
+                d_r2 = manhattan_distance(p_ai, p_r2)
+                f.write(f"  Posisi   : AI={p_ai} | R1={p_r1} (d={d_r1}) | R2={p_r2} (d={d_r2})\n")
+                f.write(f"  Skor     : AI={self.state.score_ai} pts | Runners={self.state.score_runners} pts | Orbs Sisa: {len(self.state.orbs)}\n")
+
+                # Telemetri pencarian AI jika tersedia
+                if details and "eval" in details:
+                    f.write(
+                        f"  Telemetri: Eval={details['eval']:+.1f} | Node={details.get('nodes', 0)} "
+                        f"({details.get('cutoffs', 0)} cutoffs) | Latensi={details.get('time_ms', 0):.1f}ms | Mode={details.get('mode', '-')}\n"
+                    )
+
+                # Diagnostic alert jika terdeteksi pengulangan gerakan / osilasi
+                if alert_info:
+                    f.write("  " + "!" * 76 + "\n")
+                    f.write(f"  [DIAGNOSTIC ALERT] GERAKAN BERULANG / LOOP TERDETEKSI!\n")
+                    f.write(f"  - Tipe Pola      : {alert_info.get('pattern', 'Pengulangan Gerakan')}\n")
+                    f.write(f"  - Riwayat Terkait: {alert_info.get('history', '-')}\n")
+                    f.write(f"  - Analisis Sebab : {alert_info.get('cause', '-')}\n")
+                    f.write(f"  - Solusi Diambil : {alert_info.get('action_taken', '-')}\n")
+                    f.write("  " + "!" * 76 + "\n")
+
+                f.write("-" * 80 + "\n")
+                f.flush()
+        except Exception as e:
+            print(f"Error menulis log pergerakan: {e}")
+
+    def export_match_log(self, filepath=None):
+        """Menyimpan seluruh riwayat pertandingan ke file teks rangkuman."""
+        if filepath is None:
+            filepath = os.path.join(self.log_dir, "match_history.txt")
         try:
             with open(filepath, "w", encoding="utf-8") as f:
-                f.write("=" * 75 + "\n")
+                f.write("=" * 80 + "\n")
                 f.write("       QUORIDOR CHASE: LOCKDOWN - RIWAYAT PERTANDINGAN LENGKAP\n")
-                f.write("=" * 75 + "\n")
+                f.write("=" * 80 + "\n")
                 f.write(f"Waktu Export     : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"Skor Akhir       : AI Boss = {self.state.score_ai} pts | Runners = {self.state.score_runners} pts\n")
                 f.write(f"Pemenang         : {self.state.winner if self.state.winner else 'Sedang Berjalan'}\n")
                 f.write(f"Total Langkah    : {len(self.match_history)} aksi dicatat\n")
-                f.write("-" * 75 + "\n")
-                f.write(f"{'No':<4} | {'Turn':<7} | {'Agen':<10} | {'Aksi':<6} | {'Target / Posisi':<18} | {'Skor AI':<8} | {'Skor R':<8}\n")
-                f.write("-" * 75 + "\n")
+                f.write(f"Log Pergerakan   : logs/movement_history.log\n")
+                f.write("-" * 80 + "\n")
+                f.write(f"{'No':<4} | {'Turn':<7} | {'Agen':<18} | {'Aksi':<6} | {'Target / Posisi':<16} | {'Skor AI':<8} | {'Skor R':<8}\n")
+                f.write("-" * 80 + "\n")
                 for idx, (turn, agent, act, pos, sc_ai, sc_r) in enumerate(self.match_history, 1):
-                    f.write(f"{idx:<4} | Turn {turn:<2} | {agent:<10} | {act:<6} | {str(pos):<18} | {sc_ai:<8} | {sc_r:<8}\n")
-                f.write("=" * 75 + "\n")
+                    f.write(f"{idx:<4} | Turn {turn:<2} | {agent:<18} | {act:<6} | {str(pos):<16} | {sc_ai:<8} | {sc_r:<8}\n")
+                f.write("=" * 80 + "\n")
             self.log_message(f"Log tersimpan di: {filepath}")
         except Exception as e:
             self.log_message(f"Gagal simpan log: {e}")
@@ -341,95 +416,49 @@ class GameUI:
             self.ai_wait_timer = time.time()
             self.log_message("Giliran Tim Runners selesai. AI Boss sedang berpikir...")
 
+    
     def execute_ai_turn(self):
-        """Mengeksekusi giliran AI Boss menggunakan Minimax / Alpha-Beta Pruning (2 aksi berturut-turut)."""
+        """Mengeksekusi giliran AI Boss menggunakan Minimax / Alpha-Beta Pruning."""
         if self.state.is_game_over or self.state.current_turn != "AI":
             return
 
-        actions_taken = []
-        total_elapsed = 0.0
-        total_nodes = 0
-        total_cutoffs = 0
-        last_eval = 0.0
+        t_start = time.perf_counter()
+        best_act, best_val = self.ai_agent.choose_action(self.state)
+        t_elapsed = (time.perf_counter() - t_start) * 1000.0
 
-        # AI Boss melakukan 2 aksi berturut-turut
-        for step_i in range(1, 3):
-            if self.state.is_game_over:
-                break
+        if best_act is None:
+            # Fallback jika tidak ada aksi
+            valid = get_valid_steps(self.state, self.state.p_ai)
+            best_act = ("MOVE", valid[0]) if valid else ("MOVE", self.state.p_ai)
+            best_val = 0.0
 
-            t_start = time.perf_counter()
-            best_act, best_val = self.ai_agent.choose_action(self.state)
-            t_elapsed = (time.perf_counter() - t_start) * 1000.0
-
-            if best_act is None:
-                # Fallback jika tidak ada aksi
-                valid = get_valid_steps(self.state, self.state.p_ai)
-                best_act = ("MOVE", valid[0]) if valid else ("MOVE", self.state.p_ai)
-                best_val = 0.0
-
-            # Akumulasi telemetri pencarian
-            metrics = self.ai_agent.metrics.to_dict()
-            total_elapsed += t_elapsed
-            total_nodes += metrics["nodes_explored"]
-            total_cutoffs += metrics["cutoffs"]
-            last_eval = best_val
-
-            act_type, payload = best_act
-
-            # Anti-Looping AI: Jika AI memilih kembali ke petak 1 langkah lalu (dan bukan sedang nangkep runner)
-            if act_type == "MOVE" and len(self.ai_history) >= 1 and payload == self.ai_history[-1]:
-                is_tag = (payload in self.state.p_runners)
-                if not is_tag:
-                    valid_moves = get_valid_steps(self.state, self.state.p_ai)
-                    alt_moves = [s for s in valid_moves if s != self.ai_history[-1]]
-                    if alt_moves:
-                        r1_p, r2_p = self.state.p_runners
-                        alt_best = min(alt_moves, key=lambda s: min(manhattan_distance(s, r1_p), manhattan_distance(s, r2_p)))
-                        d_alt = min(manhattan_distance(alt_best, r1_p), manhattan_distance(alt_best, r2_p))
-                        d_orig = min(manhattan_distance(payload, r1_p), manhattan_distance(payload, r2_p))
-                        if d_alt <= d_orig + 1:
-                            best_act = ("MOVE", alt_best)
-                            act_type, payload = best_act
-
-            actions_taken.append(best_act)
-
-            # Catat aksi ke log riwayat pertandingan
-            self.record_move("AI Boss", act_type, payload)
-            if act_type == "MOVE":
-                self.ai_history.append(payload)
-                if len(self.ai_history) > 6:
-                    self.ai_history.pop(0)
-
-            # Eksekusi aksi AI pada game state
-            self.state = apply_ai_action(self.state, best_act)
-
-            if act_type == "MOVE":
-                self.log_message(f"AI Boss (Aksi {step_i}/2): Melangkah ke {payload}.")
-            elif act_type == "SMASH":
-                self.log_message(f"AI Boss (Aksi {step_i}/2): SMASH ke {payload}!")
-            elif act_type == "WALL":
-                self.log_message(f"AI Boss (Aksi {step_i}/2): Pasang tembok di {payload}!")
-
-            # Render visual langkah pertama dengan jeda 200ms agar pergerakannya terlihat jelas oleh pemain
-            if step_i == 1 and not self.state.is_game_over:
-                self.draw(pygame.mouse.get_pos())
-                pygame.time.delay(200)
-                self.state.current_turn = "AI"
-
-        # Simpan telemetri pencarian gabungan
+        # Simpan telemetri pencarian
+        metrics = self.ai_agent.metrics.to_dict()
         self.last_ai_metrics = {
             "mode": self.ai_agent.mode_name,
-            "action": f"{len(actions_taken)}x: " + ", ".join([f"{a[0]}" for a in actions_taken]),
-            "eval": last_eval,
-            "nodes": total_nodes,
-            "cutoffs": total_cutoffs,
-            "time_ms": round(total_elapsed, 1)
+            "action": best_act,
+            "eval": best_val,
+            "nodes": metrics["nodes_explored"],
+            "cutoffs": metrics["cutoffs"],
+            "time_ms": round(t_elapsed, 1)
         }
+
+        # Eksekusi aksi AI pada game state
+        act_type, payload = best_act
+        self.state = apply_ai_action(self.state, best_act)
+
+        if act_type == "MOVE":
+            self.log_message(f"AI Boss melangkah ke {payload}.")
+        elif act_type == "SMASH":
+            self.log_message(f"AI Boss MENGHANCURKAN TEMBOK dengan Smash ke {payload}!")
+        elif act_type == "WALL":
+            self.log_message(f"AI Boss memasang tembok di {payload}!")
 
         # Kembalikan giliran ke Runner 1
         self.state.current_turn = "R1"
         self.log_message("Ronde baru dimulai: Giliran Runner 1 (R1).")
-
+    
+    
     def execute_auto_step(self):
         """Menjalankan 1 langkah otomatis (untuk mode Auto-Play atau tekan Spasi)."""
         if self.state.is_game_over:
@@ -834,7 +863,21 @@ class GameUI:
 
         # Auto-export riwayat pertandingan saat game selesai
         if not self.log_exported and len(self.match_history) > 0:
-            self.export_match_log("match_history.txt")
+            self.export_match_log()
+            # Catat ringkasan penutupan ke logs/movement_history.log
+            try:
+                with open(self.movement_log_path, "a", encoding="utf-8") as f:
+                    f.write("\n" + "=" * 80 + "\n")
+                    f.write("       QUORIDOR CHASE: LOCKDOWN - HASIL AKHIR PERTANDINGAN\n")
+                    f.write("=" * 80 + "\n")
+                    f.write(f"Waktu Selesai : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write(f"Pemenang      : {self.state.winner if self.state.winner else 'Selesai'}\n")
+                    f.write(f"Skor Akhir    : AI Boss = {self.state.score_ai} pts | Runners = {self.state.score_runners} pts\n")
+                    f.write(f"Total Turn    : {self.state.turn_count}\n")
+                    f.write(f"Total Aksi    : {len(self.match_history)}\n")
+                    f.write("=" * 80 + "\n\n")
+            except Exception as e:
+                print(f"Error menulis kesimpulan game: {e}")
             self.log_exported = True
 
     # =========================================================================
@@ -882,12 +925,14 @@ class GameUI:
                         self.r1_history = [self.state.p_runners[0]]
                         self.r2_history = [self.state.p_runners[1]]
                         self.ai_history = [self.state.p_ai]
+                        self.ai_wall_history = []
                         self.log_exported = False
+                        self.init_movement_log()
                         self.log_message("Permainan di-reset ke kondisi awal S0.")
 
                     # Simpan / Export Log Pertandingan (L)
                     elif event.key == pygame.K_l:
-                        self.export_match_log("match_history.txt")
+                        self.export_match_log()
 
                     # Toggle Wall Mode (W)
                     elif event.key == pygame.K_w:
