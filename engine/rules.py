@@ -7,6 +7,7 @@ Covers:
 - Grappling Rope (Wall Jump) single-use leap
 - Juggernaut Smash through wall destruction
 - Standard 2-tile wall placement & intersection verification
+- Co-op Wall Welding verification
 - Classical Quoridor "No-Complete-Cage" BFS invariant
 """
 
@@ -153,11 +154,55 @@ def validate_no_complete_cage_edges(state, candidate_edges):
     return True
 
 
-def is_valid_2tile_wall(state, orient, x, y):
+def is_valid_coop_weld(state, orient, x, y, runner_idx=None):
+    """
+    Check if a 2-tile wall at intersection (orient, x, y) can be welded into a permanent Co-op Wall.
+
+    Rules for Co-op Wall Welding:
+    1. Coordinates must be within board limits: 0 <= x < g - 1, 0 <= y < g - 1.
+    2. The wall edges must already exist as an active Solo Wall in state.solo_walls.
+    3. The wall must not already be permanent in state.coop_walls.
+    4. The wall must not belong to the AI Boss.
+    5. If runner_idx is provided, the wall must not be solo-welded by the same runner alone.
+    """
+    g = state.grid_size
+    if not (0 <= x < g - 1 and 0 <= y < g - 1):
+        return False
+    e1, e2 = wall_to_edges(orient, x, y)
+
+    # Must be currently present in solo_walls
+    if e1 not in state.solo_walls or e2 not in state.solo_walls:
+        return False
+
+    # Must not already be welded into coop_walls
+    if e1 in state.coop_walls or e2 in state.coop_walls:
+        return False
+
+    w_key = (orient.upper(), x, y)
+    if w_key in state.placed_walls:
+        val = state.placed_walls[w_key]
+        ttl = val[0] if isinstance(val, (tuple, list)) else val
+        owner = val[1] if isinstance(val, (tuple, list)) and len(val) > 1 else "RUNNER"
+        if ttl == -1 or owner == "COOP":
+            return False  # Already permanent
+        if owner == "AI":
+            return False  # Runners cannot weld AI walls
+        if runner_idx is not None and owner == f"RUNNER_{runner_idx}":
+            return False  # Requires partner runner to reinforce/weld
+
+    return True
+
+
+def is_valid_2tile_wall(state, orient, x, y, allow_coop_welding=False, runner_idx=None):
     """Check if 2-tile wall placement (orient, x, y) is legal under standard Quoridor rules."""
     g = state.grid_size
     if not (0 <= x < g - 1 and 0 <= y < g - 1):
         return False
+
+    # Check Co-op Wall Welding opportunity
+    if allow_coop_welding and is_valid_coop_weld(state, orient, x, y, runner_idx=runner_idx):
+        return True
+
     e1, e2 = wall_to_edges(orient, x, y)
     all_w = state.all_walls()
     if e1 in all_w or e2 in all_w:

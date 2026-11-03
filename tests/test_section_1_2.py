@@ -13,7 +13,6 @@ Verifies:
 
 import sys
 import os
-import pytest
 
 # Ensure root directory is on PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -25,6 +24,7 @@ from engine.rules import (
     can_juggernaut_smash,
     validate_no_complete_cage,
     is_valid_2tile_wall,
+    is_valid_coop_weld,
     wall_to_edges
 )
 from engine.transition import (
@@ -223,27 +223,61 @@ def test_terminal_state_and_utility():
     assert state.get_utility() == UTILITY_RUNNER_WIN
 
 
+def test_turn_based_coop_wall_welding():
+    """Verify turn-based Co-op Wall Welding: R1 places Solo Wall, then R2 reinforces it into permanent Co-op Wall."""
+    state = GameState.create_initial_state(seed=42)
+    w_key = ("H", 2, 3)
+    e1, e2 = wall_to_edges("H", 2, 3)
+
+    # 1. Runner 0 places Solo Wall
+    s1 = apply_runner_action(state, 0, ("WALL", w_key))
+    assert e1 in s1.solo_walls and e2 in s1.solo_walls
+    assert e1 not in s1.coop_walls and e2 not in s1.coop_walls
+    assert s1.placed_walls[w_key][0] == 2  # TTL = 2
+    assert s1.placed_walls[w_key][1] == "RUNNER_0"
+
+    # 2. Runner 0 cannot weld their own wall alone
+    assert is_valid_coop_weld(s1, "H", 2, 3, runner_idx=0) is False
+
+    # 3. Runner 1 CAN weld Runner 0's wall
+    assert is_valid_coop_weld(s1, "H", 2, 3, runner_idx=1) is True
+
+    # 4. Runner 1 executes wall placement on same groove -> Welded!
+    s2 = apply_runner_action(s1, 1, ("WALL", w_key))
+    assert e1 in s2.coop_walls and e2 in s2.coop_walls
+    assert e1 not in s2.solo_walls and e2 not in s2.solo_walls
+    assert s2.placed_walls[w_key] == (-1, "COOP")
+
+    # 5. Wall survives turn decays permanently
+    s2_t1 = step_turn_cycle(s2)
+    s2_t2 = step_turn_cycle(s2_t1)
+    assert e1 in s2_t2.coop_walls and e2 in s2_t2.coop_walls
+    assert e1 in s2_t2.all_walls()
+
+
 if __name__ == "__main__":
     print("=" * 65)
     print("🚀 MENJALANKAN UNIT TESTS BAGIAN 1.2 (State Space & PEAS)")
     print("=" * 65)
     test_initial_state_s0()
-    print("  [1/8] test_initial_state_s0                         : LULUS ✅")
+    print("  [1/9] test_initial_state_s0                         : LULUS ✅")
     test_orthogonal_movement_and_wall_blocking()
-    print("  [2/8] test_orthogonal_movement_and_wall_blocking    : LULUS ✅")
+    print("  [2/9] test_orthogonal_movement_and_wall_blocking    : LULUS ✅")
     test_juggernaut_smash_mechanic()
-    print("  [3/8] test_juggernaut_smash_mechanic                : LULUS ✅")
+    print("  [3/9] test_juggernaut_smash_mechanic                : LULUS ✅")
     test_grappling_rope_wall_jump()
-    print("  [4/8] test_grappling_rope_wall_jump                 : LULUS ✅")
+    print("  [4/9] test_grappling_rope_wall_jump                 : LULUS ✅")
     test_solo_wall_decay_vs_coop_wall_welding()
-    print("  [5/8] test_solo_wall_decay_vs_coop_wall_welding     : LULUS ✅")
+    print("  [5/9] test_solo_wall_decay_vs_coop_wall_welding     : LULUS ✅")
     test_2tile_wall_placement_and_no_cage_rule()
-    print("  [6/8] test_2tile_wall_placement_and_no_cage_rule    : LULUS ✅")
+    print("  [6/9] test_2tile_wall_placement_and_no_cage_rule    : LULUS ✅")
+    test_turn_based_coop_wall_welding()
+    print("  [7/9] test_turn_based_coop_wall_welding             : LULUS ✅")
     test_data_orb_collection_and_tag_teleport()
-    print("  [7/8] test_data_orb_collection_and_tag_teleport     : LULUS ✅")
+    print("  [8/9] test_data_orb_collection_and_tag_teleport     : LULUS ✅")
     test_terminal_state_and_utility()
-    print("  [8/8] test_terminal_state_and_utility               : LULUS ✅")
+    print("  [9/9] test_terminal_state_and_utility               : LULUS ✅")
     print("=" * 65)
-    print("🎉 SEMUA 8 PENGUJIAN BAGIAN 1.2 LULUS DENGAN SEMPURNA!")
+    print("🎉 SEMUA 9 PENGUJIAN BAGIAN 1.2 LULUS DENGAN SEMPURNA!")
     print("=" * 65)
 

@@ -4,7 +4,7 @@ PIC: Deus, Althaf (Week 1 - Task 1.2: Pemodelan State Space & P.E.A.S)
 
 Handles:
 - Deterministic state mutation T(s, a) -> s'
-- Co-op Wall Welding (simultaneous runner wall placement -> permanent)
+- Co-op Wall Welding (simultaneous runner wall placement or turn-based reinforcement -> permanent)
 - Solo Wall decay (2 turns duration)
 - Grappling Rope consumption & single-use mechanics
 - Juggernaut Smash wall obliteration & 3-turn cooldown reset
@@ -110,13 +110,28 @@ def apply_runner_action(state, runner_idx, action, coop_partner_wall=None):
     elif action_type == "WALL":
         # Support 2-tile wall (orient, x, y) or single edge
         if isinstance(payload, (tuple, list)) and len(payload) == 3 and isinstance(payload[0], str):
-            edges = list(wall_to_edges(payload[0], payload[1], payload[2]))
-            w_key = (payload[0], payload[1], payload[2])
+            orient, wx, wy = payload[0].upper(), payload[1], payload[2]
+            edges = list(wall_to_edges(orient, wx, wy))
+            w_key = (orient, wx, wy)
         else:
             edges = [payload]
             w_key = None
 
-        is_welded = (coop_partner_wall is not None and coop_partner_wall == payload)
+        # Determine if this wall is welded into permanent Co-op Wall:
+        # Case 1: Simultaneous team action (minimax / team dual where partner also chose this wall)
+        # Case 2: Turn-based welding on an existing solo wall placed by the partner runner
+        is_already_solo = (
+            all(e in new_state.solo_walls for e in edges) and
+            all(e not in new_state.coop_walls for e in edges)
+        )
+        prev_owner = new_state.placed_walls.get(w_key, (None, None))[1] if w_key else None
+        turn_based_weld = is_already_solo and (prev_owner != f"RUNNER_{runner_idx}") and (prev_owner != "AI")
+
+        is_welded = (
+            (coop_partner_wall is not None and coop_partner_wall == payload) or
+            turn_based_weld
+        )
+
         for e in edges:
             if is_welded:
                 if e in new_state.solo_walls:
@@ -126,7 +141,7 @@ def apply_runner_action(state, runner_idx, action, coop_partner_wall=None):
                 new_state.solo_walls[e] = SOLO_WALL_LIFETIME
 
         if w_key is not None:
-            new_state.placed_walls[w_key] = (-1, "COOP") if is_welded else (SOLO_WALL_LIFETIME, "RUNNER")
+            new_state.placed_walls[w_key] = (-1, "COOP") if is_welded else (SOLO_WALL_LIFETIME, f"RUNNER_{runner_idx}")
 
         new_state.invalidate_wall_cache()
 

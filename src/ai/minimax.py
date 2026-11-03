@@ -20,7 +20,8 @@ from engine.rules import (
     get_valid_steps,
     can_wall_jump,
     can_juggernaut_smash,
-    is_valid_2tile_wall
+    is_valid_2tile_wall,
+    is_valid_coop_weld
 )
 from engine.transition import apply_action
 from src.ai.heuristic import evaluate_state
@@ -144,8 +145,9 @@ def get_candidate_actions_runners(state, max_combinations=8):
         for orient in ("H", "V"):
             wx = max(0, min(state.grid_size - 2, cx))
             wy = max(0, min(state.grid_size - 2, cy))
-            if is_valid_2tile_wall(state, orient, wx, wy):
-                moves.append((5.0, ("WALL", (orient, wx, wy))))
+            if is_valid_2tile_wall(state, orient, wx, wy, allow_coop_welding=True, runner_idx=r_idx):
+                score = 25.0 if is_valid_coop_weld(state, orient, wx, wy, runner_idx=r_idx) else 5.0
+                moves.append((score, ("WALL", (orient, wx, wy))))
 
         moves.sort(key=lambda m: m[0], reverse=True)
         return moves[:4]

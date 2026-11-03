@@ -11,6 +11,7 @@ from engine.rules import (
     has_path_bfs,
     validate_no_complete_cage,
     is_valid_2tile_wall,
+    is_valid_coop_weld,
     get_all_valid_2tile_walls,
     wall_to_edges,
     validate_no_complete_cage_edges
@@ -29,10 +30,10 @@ __all__ = [
     "has_path_bfs",
     "validate_no_complete_cage",
     "is_valid_2tile_wall",
+    "is_valid_coop_weld",
     "get_all_valid_2tile_walls",
     "wall_to_edges",
     "validate_no_complete_cage_edges",
     "apply_action",
     "step_turn_cycle"
 ]
-

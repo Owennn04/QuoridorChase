@@ -35,6 +35,7 @@ from engine.rules import (
     can_wall_jump,
     can_juggernaut_smash,
     is_valid_2tile_wall,
+    is_valid_coop_weld,
     wall_to_edges
 )
 from engine.transition import (
@@ -271,7 +272,7 @@ class GameUI:
             self.log_message(f"Langkah ke {target_cell} tidak valid / terhalang tembok!")
 
     def handle_wall_click(self, intersection):
-        """Menangani klik untuk memasang tembok 2-tile."""
+        """Menangani klik untuk memasang tembok 2-tile atau melakukan Co-op Wall Welding."""
         if self.state.is_game_over:
             return
 
@@ -284,15 +285,33 @@ class GameUI:
 
         r, c = intersection
         orient = self.wall_orient
+        w_key = (orient, r, c)
 
-        if is_valid_2tile_wall(self.state, orient, r, c):
-            self.record_move(f"Runner {runner_idx+1}", "WALL", (orient, r, c))
-            self.state = apply_runner_action(self.state, runner_idx, ("WALL", (orient, r, c)))
-            self.log_message(f"Runner {runner_idx+1} memasang tembok {orient} di ({r}, {c})!")
+        is_weld = is_valid_coop_weld(self.state, orient, r, c, runner_idx=runner_idx)
+        is_valid_new = is_valid_2tile_wall(self.state, orient, r, c, allow_coop_welding=False)
+
+        if is_weld:
+            self.record_move(f"Runner {runner_idx+1}", "WELD", w_key)
+            self.state = apply_runner_action(self.state, runner_idx, ("WALL", w_key))
+            self.log_message(f"⚡ CO-OP WELDING! Runner {runner_idx+1} mematri tembok {orient} di ({r}, {c}) menjadi PERMANEN!")
+            self.wall_mode = False
+            self._advance_runner_turn()
+        elif is_valid_new:
+            self.record_move(f"Runner {runner_idx+1}", "WALL", w_key)
+            self.state = apply_runner_action(self.state, runner_idx, ("WALL", w_key))
+            self.log_message(f"Runner {runner_idx+1} memasang Solo Wall {orient} di ({r}, {c}) (TTL=2)!")
             self.wall_mode = False
             self._advance_runner_turn()
         else:
-            self.log_message(f"Tembok di ({orient}, {r}, {c}) melanggar aturan (tabrakan/mengurung)!")
+            val = self.state.placed_walls.get(w_key)
+            if val and (val[0] == -1 or (len(val) > 1 and val[1] == "COOP")):
+                self.log_message(f"Tembok di ({orient}, {r}, {c}) sudah menjadi Co-op Wall permanen!")
+            elif val and len(val) > 1 and val[1] == f"RUNNER_{runner_idx}":
+                self.log_message(f"Tembok ({orient}, {r}, {c}) dipasang oleh Anda sendiri! Butuh Runner rekan untuk Co-op Welding.")
+            elif val and len(val) > 1 and val[1] == "AI":
+                self.log_message(f"Tembok di ({orient}, {r}, {c}) adalah tembok AI Boss dan tidak bisa di-weld!")
+            else:
+                self.log_message(f"Tembok di ({orient}, {r}, {c}) melanggar aturan (tabrakan/mengurung)!")
 
     def handle_arrow_move(self, dr, dc):
         """Menangani pergerakan menggunakan tombol panah atau WASD."""
@@ -554,8 +573,20 @@ class GameUI:
 
         r, c = inter
         orient = self.wall_orient
-        is_valid = is_valid_2tile_wall(self.state, orient, r, c)
-        preview_color = (34, 197, 94, 180) if is_valid else (239, 68, 68, 180)
+
+        runner_idx = 0 if self.state.current_turn == "R1" else (1 if self.state.current_turn == "R2" else None)
+        is_weld = is_valid_coop_weld(self.state, orient, r, c, runner_idx=runner_idx) if runner_idx is not None else False
+        is_valid_new = is_valid_2tile_wall(self.state, orient, r, c, allow_coop_welding=False)
+
+        if is_weld:
+            # Warna Neon Purple terang khusus preview Co-op Welding
+            preview_color = (192, 132, 252, 210)
+        elif is_valid_new:
+            # Warna Hijau untuk tembok baru yang valid
+            preview_color = (34, 197, 94, 180)
+        else:
+            # Warna Merah untuk langkah tidak valid
+            preview_color = (239, 68, 68, 180)
 
         # Hitung koordinat preview persegi panjang tembok
         if orient == "H":
