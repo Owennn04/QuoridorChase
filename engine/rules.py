@@ -130,6 +130,11 @@ def validate_no_complete_cage_edges(state, candidate_edges):
     2. An unblocked path must exist between AI Boss and Runner 1.
     3. An unblocked path must exist between AI Boss and Runner 2.
     """
+    if isinstance(candidate_edges, tuple) and len(candidate_edges) == 2 and isinstance(candidate_edges[0], tuple):
+        candidate_edges = [candidate_edges]
+    elif not isinstance(candidate_edges, (list, tuple, set)):
+        candidate_edges = [candidate_edges]
+
     walls = state.all_walls()
     for e in candidate_edges:
         if e in walls:
@@ -269,15 +274,6 @@ def get_all_valid_2tile_walls(state):
     return valid_walls
 
 
-def validate_no_complete_cage(state, candidate_edge):
-    """
-    Classical Quoridor Invariant:
-    A wall placement is illegal if it completely traps any player or closes off all paths.
-    Delegates to validate_no_complete_cage_edges for consistent invariant enforcement.
-    """
-    return validate_no_complete_cage_edges(state, [candidate_edge])
-
-
 def get_valid_wall_placements(state, center=None, max_radius=2):
     """
     Candidate Wall Filtering:
@@ -301,12 +297,12 @@ def get_valid_wall_placements(state, center=None, max_radius=2):
             # Check horizontal wall between (x, y) and (x, y+1)
             if y + 1 < g:
                 h_edge = canonical_edge((x, y), (x, y + 1))
-                if h_edge not in current_walls and validate_no_complete_cage(state, h_edge):
+                if h_edge not in current_walls and validate_no_complete_cage_edges(state, h_edge):
                     valid_walls.append(h_edge)
             # Check vertical wall between (x, y) and (x+1, y)
             if x + 1 < g:
                 v_edge = canonical_edge((x, y), (x + 1, y))
-                if v_edge not in current_walls and validate_no_complete_cage(state, v_edge):
+                if v_edge not in current_walls and validate_no_complete_cage_edges(state, v_edge):
                     valid_walls.append(v_edge)
 
     return valid_walls
