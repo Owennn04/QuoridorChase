@@ -87,11 +87,13 @@ class GameUI:
         self.clock = pygame.time.Clock()
 
         # Inisialisasi Font
+        
         self.font_title = pygame.font.SysFont("Trebuchet MS", 18, bold=True)
         self.font_header = pygame.font.SysFont("Arial", 14, bold=True)
         self.font_body = pygame.font.SysFont("Consolas", 12)
         self.font_small = pygame.font.SysFont("Consolas", 11)
         self.font_pawn = pygame.font.SysFont("Arial", 13, bold=True)
+        self.font = pygame.font.SysFont("Arial", 24)
 
         # Inisialisasi Warna dari THEME_TOKENS
         self.color_bg = hex_to_rgb(THEME_TOKENS.get("cyber_bg", "#090d16"))
@@ -467,6 +469,8 @@ class GameUI:
         # 1. Gambar Papan & Grid Petak
         self._draw_board(mouse_pos)
 
+
+
         # 2. Gambar Tembok-tembok Aktif
         self._draw_walls()
 
@@ -490,6 +494,19 @@ class GameUI:
         # 8. Gambar Layar Game Over jika Permainan Selesai
         if self.state.is_game_over:
             self._draw_game_over_overlay()
+
+
+        # 9. Ubah detik desimal menjadi Menit dan Detik bulat
+        sisa_waktu_bulat = int(self.state.time_remaining)
+        menit = sisa_waktu_bulat // 60
+        detik = sisa_waktu_bulat % 60
+
+        # 10. Format menjadi MM:SS (contoh: 04:09)
+        teks_timer = f"Sisa Waktu: {menit:02d}:{detik:02d}"
+
+        # 11. Render ke layar (misalnya ditaruh di pojok kiri atas/kanan atas
+        permukaan_teks = self.font. render(teks_timer, True, (255, 255, 255)) # Warna Putih
+        self.screen.blit(permukaan_teks, (20, 20)) # Koordinat X=20, Y=20
 
         pygame.display.flip()
 
@@ -925,6 +942,13 @@ class GameUI:
             # --- 2. Update Otomatis (AI Turn & Auto-Play) ---
             if not self.state.is_game_over:
                 # Giliran AI Boss otomatis dieksekusi setelah jeda singkat
+                self.state.time_remaining -= dt  # Kurangi waktu dengan delta time
+                
+                if self.state.time_remaining <= 0:
+                    self.state.time_remaining = 0
+                    self.state.is_game_over = True
+                    self.log_message("Waktu Habis! Permainan Selesai.")
+                
                 if self.state.current_turn == "AI":
                     if time.time() - self.ai_wait_timer >= self.ai_delay_seconds:
                         self.execute_ai_turn()
@@ -941,6 +965,8 @@ class GameUI:
 
         pygame.quit()
         sys.exit()
+
+    
 
 
 if __name__ == "__main__":

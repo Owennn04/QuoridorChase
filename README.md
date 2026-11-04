@@ -26,39 +26,46 @@
 
 ```text
 QuoridorChase/
-├── config.py                                        # Konstanta geometri 9x9, timer, skor, cooldown, bobot heuristik
+├── config.py                 # Konstanta geometri 9x9, timer, skor, cooldown, bobot heuristik
+├── requirements.txt          # Dependensi eksternal (pygame-ce)
+├── readme.txt                # Panduan instruksi, library, IDE, dan setup cara menjalankan
+├── README.md                 # Dokumentasi ringkas proyek
 ├── engine/
-│   ├── __init__.py                                  # Paket engine & export fungsi utama
-│   ├── state.py                                     # Class GameState (S), S0, clone, terminal, utility U(s)
-│   ├── rules.py                                     # Aturan gerak ortogonal, Smash, Rope, BFS No-Cage
-│   └── transition.py                                # Model transisi T(s,a), wall decay, welding, scoring
-├── src/ai/
-│   ├── __init__.py                                  # Ekspor paket AI cerdas
-│   ├── minimax.py                                   # Minimax & Alpha-Beta Pruning (Dual Mode Toggle), Candidate Filtering
-│   ├── pathfinding.py                               # 3D A* Pathfinding (x, y, has_smash)
-│   └── heuristic.py                                 # Fungsi evaluasi h(s) lengkap (W1-W5, Confinement, Rope)
-├── tests/
-│   ├── test_section_1_2.py                          # 8 Unit test untuk verifikasi Bagian 1.2
-│   └── test_section_2_1.py                          # 6 Unit test untuk verifikasi Bagian 2.1 (Dual mode, pruning, latency)
-├── docs/
-│   └── Bagian_1_2_Pemodelan_State_Space_dan_PEAS.md # Dokumen formal spesifikasi P.E.A.S & State Space
-├── Bagian_1_2_Pemodelan_State_Space_dan_PEAS.ipynb  # Notebook interaktif demonstrasi mekanik game
-└── Bagian_2_1_Minimax_dan_Alpha_Beta.ipynb          # Notebook interaktif dengan Tombol Toggle Mode Minimax & Alpha-Beta
+│   ├── __init__.py           # Paket engine & export fungsi utama
+│   ├── state.py              # Class GameState (S), S0, clone, terminal, utility U(s)
+│   ├── rules.py              # Aturan gerak ortogonal, Smash, Rope, BFS No-Cage
+│   └── transition.py         # Model transisi T(s,a), wall decay, welding, scoring
+└── src/
+    ├── ai/
+    │   ├── __init__.py       # Ekspor paket AI
+    │   ├── minimax.py        # Minimax & Alpha-Beta Pruning (Dual Mode Toggle)
+    │   ├── pathfinding.py    # 3D A* Pathfinding (x, y, has_smash)
+    │   └── heuristic.py      # Fungsi evaluasi h(s) berbasis Confinement Score & Rope
+    └── core/
+        └── ui.py             # GUI Interaktif Pygame (Visual board, HUD, controls)
 ```
 
 ---
 
-## Cara Menjalankan Pengujian
+## Cara Menjalankan Game
 
-1. **Jalankan Unit Test Bagian 1.2:**
+1. **Instal Dependensi:**
    ```bash
-   py -c "import sys; sys.modules['pytest']=type('pytest',(),{}); import tests.test_section_1_2 as t; [getattr(t, f)() for f in dir(t) if f.startswith('test_')]; print('Semua test 1.2 Lulus!')"
+   pip install -r requirements.txt
    ```
 
-2. **Jalankan Unit Test Bagian 2.1:**
+2. **Jalankan Aplikasi GUI Game:**
    ```bash
-   py -c "import tests.test_section_2_1 as t; [getattr(t, f)() for f in dir(t) if f.startswith('test_')]; print('Semua test 2.1 Lulus!')"
+   python -m src.core.ui
    ```
 
-3. **Jalankan Notebook Interaktif:**
-   Buka file `Bagian_2_1_Minimax_dan_Alpha_Beta.ipynb` di VS Code / Jupyter Lab untuk mencoba tombol toggle interaktif antara Alpha-Beta Pruning dan Pure Minimax secara visual.
+3. **Kontrol Utama:**
+   - **WASD / Tombol Panah**: Bergerak ortogonal
+   - **W / Klik Kiri Mouse**: Memasang tembok rintangan
+   - **R**: Memutar orientasi tembok (horizontal/vertikal)
+   - **E**: Grappling Rope (melompati rintangan)
+   - **Space**: Smash Attack (menghancurkan rintangan)
+   - **P**: Toggle Auto-Play AI
+   - **T**: Toggle Mode Alpha-Beta Pruning / Pure Minimax
+   - **F1**: Reset ke State Awal (S0)
+   - **ESC**: Keluar permainan
