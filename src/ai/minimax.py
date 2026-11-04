@@ -408,19 +408,7 @@ class MinimaxAgent:
         if is_max:
             if self.use_candidate_filtering:
                 return get_candidate_actions_ai(state, max_walls=4, wall_radius=2, history=history)
-            else:
-                acts = []
-                for s in get_valid_steps(state, state.p_ai):
-                    acts.append(("MOVE", s))
-                for d, _ in can_juggernaut_smash(state):
-                    acts.append(("SMASH", d))
-                return acts
         else:
             if self.use_candidate_filtering:
                 return get_candidate_actions_runners(state, max_combinations=8)
-            else:
-                acts = []
-                for s1 in get_valid_steps(state, state.p_runners[0]):
-                    for s2 in get_valid_steps(state, state.p_runners[1]):
-                        acts.append(("TEAM_DUAL", (("MOVE", s1), ("MOVE", s2))))
-                return acts if acts else [("MOVE", state.p_runners[0])]
+            
