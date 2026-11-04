@@ -242,9 +242,13 @@ class GameState:
         if not empty_cells:
             return None
 
-        # Fully Random: pilih petak acak dari seluruh petak kosong
-        chooser = rng if rng is not None else random
-        chosen = chooser.choice(empty_cells)
+        if rng is not None:
+            chosen = rng.choice(empty_cells)
+        else:
+            # Deterministic pseudo-random selection berbasis hash state agar
+            # eksplorasi tree Minimax & Alpha-Beta konsisten (tidak terganggu oleh global RNG mutation)
+            idx = (self.turn_count * 17 + len(self.all_walls()) * 7 + sum(x * 9 + y for x, y in self.orbs)) % len(empty_cells)
+            chosen = empty_cells[idx]
         
         self.orbs.add(chosen)
         return chosen

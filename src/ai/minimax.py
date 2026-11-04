@@ -237,7 +237,7 @@ class MinimaxAgent:
 
     def __init__(
         self,
-        depth_limit=2,
+        depth_limit=4,
         use_alpha_beta=True,
         use_candidate_filtering=True,
         eval_fn=None

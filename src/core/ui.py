@@ -111,7 +111,7 @@ class GameUI:
 
         # Objek State & AI
         self.state = GameState.create_initial_state(seed=42)
-        self.ai_agent = MinimaxAgent(depth_limit=2, use_alpha_beta=True)
+        self.ai_agent = MinimaxAgent(depth_limit=4, use_alpha_beta=True)
 
         # Status Kontrol Pemain
         self.wall_mode = False          # Mode pasang tembok (tekan W)
