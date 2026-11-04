@@ -173,8 +173,6 @@ flowchart TD
   * Memindahkan runner yang terkena tag ke sudut terjauh yang belum ditempati (*Phase-Blink Respawn*).
 * **Baris 239–254 (`is_terminal()` & `get_utility()`):**
   * Evaluasi kondisi akhir pertandingan dan penghitungan fungsi utilitas $U(s) \in \{+1000, -1000, 0\}$.
-* **Baris 260–297 (`to_dict(self)`):**
-  * Serialisasi state lengkap ke dictionary murni untuk pengiriman data JSON.
 
 #### 2. Call Hierarchy (Di Mana File/Sintaks Ini Dipanggil):
 * `canonical_edge` dipanggil oleh:
