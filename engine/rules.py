@@ -272,37 +272,3 @@ def get_all_valid_2tile_walls(state):
             if is_valid_2tile_wall(state, "V", x, y):
                 valid_walls.append(("V", x, y))
     return valid_walls
-
-
-def get_valid_wall_placements(state, center=None, max_radius=2):
-    """
-    Candidate Wall Filtering:
-    Enumerate edges within max_radius of center that do not violate the no-cage rule.
-    If center is None, enumerates across board.
-    """
-    valid_walls = []
-    current_walls = state.all_walls()
-    g = state.grid_size
-
-    if center is not None:
-        cx, cy = center
-        x_min, x_max = max(0, cx - max_radius), min(g - 1, cx + max_radius)
-        y_min, y_max = max(0, cy - max_radius), min(g - 1, cy + max_radius)
-    else:
-        x_min, x_max = 0, g - 1
-        y_min, y_max = 0, g - 1
-
-    for x in range(x_min, x_max + 1):
-        for y in range(y_min, y_max + 1):
-            # Check horizontal wall between (x, y) and (x, y+1)
-            if y + 1 < g:
-                h_edge = canonical_edge((x, y), (x, y + 1))
-                if h_edge not in current_walls and validate_no_complete_cage_edges(state, h_edge):
-                    valid_walls.append(h_edge)
-            # Check vertical wall between (x, y) and (x+1, y)
-            if x + 1 < g:
-                v_edge = canonical_edge((x, y), (x + 1, y))
-                if v_edge not in current_walls and validate_no_complete_cage_edges(state, v_edge):
-                    valid_walls.append(v_edge)
-
-    return valid_walls

@@ -5,7 +5,6 @@ PIC: Deus, Althaf (Week 1 - Task 1.2: Pemodelan State Space & P.E.A.S)
 from engine.state import GameState, canonical_edge, edge_to_groove, groove_to_edge
 from engine.rules import (
     get_valid_steps,
-    get_valid_wall_placements,
     can_wall_jump,
     can_juggernaut_smash,
     has_path_bfs,
@@ -23,7 +22,6 @@ __all__ = [
     "edge_to_groove",
     "groove_to_edge",
     "get_valid_steps",
-    "get_valid_wall_placements",
     "can_wall_jump",
     "can_juggernaut_smash",
     "has_path_bfs",
