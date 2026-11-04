@@ -111,7 +111,7 @@ class GameUI:
 
         # Objek State & AI
         self.state = GameState.create_initial_state(seed=42)
-        self.ai_agent = MinimaxAgent(depth_limit=4, use_alpha_beta=True)
+        self.ai_agent = MinimaxAgent()
 
         # Status Kontrol Pemain
         self.wall_mode = False          # Mode pasang tembok (tekan W)
@@ -138,118 +138,10 @@ class GameUI:
         }
 
         # Riwayat Pertandingan Lengkap & Anti-Looping Memory
-        self.match_history = []
         self.r1_history = [self.state.p_runners[0]]
         self.r2_history = [self.state.p_runners[1]]
         self.ai_history = [self.state.p_ai]
         self.ai_wall_history = []
-        self.log_exported = False
-
-        # Inisialisasi Berkas Log Pergerakan & Diagnostik Real-Time
-        self.log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs")
-        self.movement_log_path = os.path.join(self.log_dir, "movement_history.log")
-        self.init_movement_log()
-
-    def init_movement_log(self):
-        """Inisialisasi file log pergerakan dengan header sesi baru."""
-        try:
-            os.makedirs(self.log_dir, exist_ok=True)
-            with open(self.movement_log_path, "a", encoding="utf-8") as f:
-                f.write("\n" + "=" * 80 + "\n")
-                f.write("       QUORIDOR CHASE: LOCKDOWN - LOG PERGERAKAN & DIAGNOSTIK SESI\n")
-                f.write("=" * 80 + "\n")
-                f.write(f"Waktu Sesi Dimulai : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"Ukuran Grid        : {GRID_SIZE}x{GRID_SIZE}\n")
-                f.write(f"Posisi Awal AI     : {self.state.p_ai}\n")
-                f.write(f"Posisi Awal R1/R2  : R1={self.state.p_runners[0]}, R2={self.state.p_runners[1]}\n")
-                f.write(f"Data Orbs Awal     : {list(self.state.orbs)}\n")
-                f.write(f"Mode AI Awal       : {self.ai_agent.mode_name} (Depth {self.ai_agent.depth_limit})\n")
-                f.write("-" * 80 + "\n")
-                f.write("Format Catatan Log:\n")
-                f.write("[Waktu | Turn] Agen -> Aksi (Posisi / Koordinat)\n")
-                f.write("  Snapshot     : Posisi AI & Runners, Jarak ke Target, Skor, Sisa Orbs\n")
-                f.write("  Telemetri AI : Evaluasi h(s), Nodes diuji, Pruning Cutoffs, Latensi (ms)\n")
-                f.write("  [ALERT]      : Deteksi Pengulangan Gerakan & Analisis Penyebab\n")
-                f.write("=" * 80 + "\n\n")
-        except Exception as e:
-            print(f"Gagal inisialisasi movement log: {e}")
-
-    def record_move(self, agent_name, act_type, payload, details=None, alert_info=None):
-        """
-        Mencatat aksi secara real-time ke memori dan streaming langsung ke logs/movement_history.log.
-        """
-        curr_turn = self.state.turn_count
-        timestamp = time.strftime("%H:%M:%S")
-
-        # Simpan ke riwayat memori pertandingan
-        self.match_history.append((
-            curr_turn,
-            agent_name,
-            act_type,
-            payload,
-            self.state.score_ai,
-            self.state.score_runners
-        ))
-
-        # Tulis langsung ke file movement_history.log (streaming real-time)
-        try:
-            with open(self.movement_log_path, "a", encoding="utf-8") as f:
-                f.write(f"[{timestamp} | Turn {curr_turn:02d}] {agent_name:<18} -> {act_type:<5} {str(payload)}\n")
-
-                # Snapshot posisi agen & jarak
-                p_ai = self.state.p_ai
-                p_r1 = self.state.p_runners[0]
-                p_r2 = self.state.p_runners[1]
-                d_r1 = manhattan_distance(p_ai, p_r1)
-                d_r2 = manhattan_distance(p_ai, p_r2)
-                f.write(f"  Posisi   : AI={p_ai} | R1={p_r1} (d={d_r1}) | R2={p_r2} (d={d_r2})\n")
-                f.write(f"  Skor     : AI={self.state.score_ai} pts | Runners={self.state.score_runners} pts | Orbs Sisa: {len(self.state.orbs)}\n")
-
-                # Telemetri pencarian AI jika tersedia
-                if details and "eval" in details:
-                    f.write(
-                        f"  Telemetri: Eval={details['eval']:+.1f} | Node={details.get('nodes', 0)} "
-                        f"({details.get('cutoffs', 0)} cutoffs) | Latensi={details.get('time_ms', 0):.1f}ms | Mode={details.get('mode', '-')}\n"
-                    )
-
-                # Diagnostic alert jika terdeteksi pengulangan gerakan / osilasi
-                if alert_info:
-                    f.write("  " + "!" * 76 + "\n")
-                    f.write(f"  [DIAGNOSTIC ALERT] GERAKAN BERULANG / LOOP TERDETEKSI!\n")
-                    f.write(f"  - Tipe Pola      : {alert_info.get('pattern', 'Pengulangan Gerakan')}\n")
-                    f.write(f"  - Riwayat Terkait: {alert_info.get('history', '-')}\n")
-                    f.write(f"  - Analisis Sebab : {alert_info.get('cause', '-')}\n")
-                    f.write(f"  - Solusi Diambil : {alert_info.get('action_taken', '-')}\n")
-                    f.write("  " + "!" * 76 + "\n")
-
-                f.write("-" * 80 + "\n")
-                f.flush()
-        except Exception as e:
-            print(f"Error menulis log pergerakan: {e}")
-
-    def export_match_log(self, filepath=None):
-        """Menyimpan seluruh riwayat pertandingan ke file teks rangkuman."""
-        if filepath is None:
-            filepath = os.path.join(self.log_dir, "match_history.txt")
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write("=" * 80 + "\n")
-                f.write("       QUORIDOR CHASE: LOCKDOWN - RIWAYAT PERTANDINGAN LENGKAP\n")
-                f.write("=" * 80 + "\n")
-                f.write(f"Waktu Export     : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"Skor Akhir       : AI Boss = {self.state.score_ai} pts | Runners = {self.state.score_runners} pts\n")
-                f.write(f"Pemenang         : {self.state.winner if self.state.winner else 'Sedang Berjalan'}\n")
-                f.write(f"Total Langkah    : {len(self.match_history)} aksi dicatat\n")
-                f.write(f"Log Pergerakan   : logs/movement_history.log\n")
-                f.write("-" * 80 + "\n")
-                f.write(f"{'No':<4} | {'Turn':<7} | {'Agen':<18} | {'Aksi':<6} | {'Target / Posisi':<16} | {'Skor AI':<8} | {'Skor R':<8}\n")
-                f.write("-" * 80 + "\n")
-                for idx, (turn, agent, act, pos, sc_ai, sc_r) in enumerate(self.match_history, 1):
-                    f.write(f"{idx:<4} | Turn {turn:<2} | {agent:<18} | {act:<6} | {str(pos):<16} | {sc_ai:<8} | {sc_r:<8}\n")
-                f.write("=" * 80 + "\n")
-            self.log_message(f"Log tersimpan di: {filepath}")
-        except Exception as e:
-            self.log_message(f"Gagal simpan log: {e}")
 
     # =========================================================================
     # Helper Koordinat & Hit-Testing
@@ -314,7 +206,6 @@ class GameUI:
             jump_moves = can_wall_jump(self.state, runner_idx)
             valid_destinations = [dest for dest, _ in jump_moves]
             if target_cell in valid_destinations:
-                self.record_move(f"Runner {runner_idx+1}", "ROPE", target_cell)
                 self.state = apply_runner_action(self.state, runner_idx, ("ROPE", target_cell))
                 # Update history posisi
                 h = self.r1_history if runner_idx == 0 else self.r2_history
@@ -337,7 +228,6 @@ class GameUI:
                 self.log_message(f"Petak {target_cell} sudah ditempati rekan Runner {other_idx+1}!")
                 return
 
-            self.record_move(f"Runner {runner_idx+1}", "MOVE", target_cell)
             self.state = apply_runner_action(self.state, runner_idx, ("MOVE", target_cell))
             # Update history posisi
             h = self.r1_history if runner_idx == 0 else self.r2_history
@@ -378,13 +268,11 @@ class GameUI:
         is_valid_new = is_valid_2tile_wall(self.state, orient, r, c, allow_coop_welding=False, runner_idx=runner_idx)
 
         if is_weld:
-            self.record_move(f"Runner {runner_idx+1}", "WELD", w_key)
             self.state = apply_runner_action(self.state, runner_idx, ("WALL", w_key))
             self.log_message(f"⚡ CO-OP WELDING! Runner {runner_idx+1} mematri tembok {orient} di ({r}, {c}) menjadi PERMANEN!")
             self.wall_mode = False
             self._advance_runner_turn()
         elif is_valid_new:
-            self.record_move(f"Runner {runner_idx+1}", "WALL", w_key)
             self.state = apply_runner_action(self.state, runner_idx, ("WALL", w_key))
             self.log_message(f"Runner {runner_idx+1} memasang Solo Wall {orient} di ({r}, {c}) (TTL=2)!")
             self.wall_mode = False
@@ -463,8 +351,6 @@ class GameUI:
         act_type, payload = best_act
         self.state = apply_ai_action(self.state, best_act)
 
-        # Catat aksi AI ke riwayat pertandingan & telemetry stream
-        self.record_move("AI Boss", act_type, payload, details=self.last_ai_metrics)
 
         # Update riwayat posisi AI untuk Anti-Osilasi
         if act_type in ("MOVE", "SMASH"):
@@ -555,7 +441,6 @@ class GameUI:
                 best_act = max(candidate_actions, key=score_action)
                 act_type, best_step = best_act
 
-                self.record_move(f"Runner {r_idx+1}", act_type, best_step)
                 recent.append(best_step)
                 if len(recent) > 12:
                     recent.pop(0)
@@ -941,24 +826,7 @@ class GameUI:
         self.screen.blit(txt_score, (cx - (txt_score.get_width() // 2), cy + 55))
         self.screen.blit(txt_prompt, (cx - (txt_prompt.get_width() // 2), cy + 85))
 
-        # Auto-export riwayat pertandingan saat game selesai
-        if not self.log_exported and len(self.match_history) > 0:
-            self.export_match_log()
-            # Catat ringkasan penutupan ke logs/movement_history.log
-            try:
-                with open(self.movement_log_path, "a", encoding="utf-8") as f:
-                    f.write("\n" + "=" * 80 + "\n")
-                    f.write("       QUORIDOR CHASE: LOCKDOWN - HASIL AKHIR PERTANDINGAN\n")
-                    f.write("=" * 80 + "\n")
-                    f.write(f"Waktu Selesai : {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-                    f.write(f"Pemenang      : {self.state.winner if self.state.winner else 'Selesai'}\n")
-                    f.write(f"Skor Akhir    : AI Boss = {self.state.score_ai} pts | Runners = {self.state.score_runners} pts\n")
-                    f.write(f"Total Turn    : {self.state.turn_count}\n")
-                    f.write(f"Total Aksi    : {len(self.match_history)}\n")
-                    f.write("=" * 80 + "\n\n")
-            except Exception as e:
-                print(f"Error menulis kesimpulan game: {e}")
-            self.log_exported = True
+
 
     # =========================================================================
     # Game Loop Utama
@@ -1001,18 +869,12 @@ class GameUI:
                         self.wall_mode = False
                         self.rope_mode = False
                         self.auto_play = False
-                        self.match_history = []
                         self.r1_history = [self.state.p_runners[0]]
                         self.r2_history = [self.state.p_runners[1]]
                         self.ai_history = [self.state.p_ai]
                         self.ai_wall_history = []
-                        self.log_exported = False
-                        self.init_movement_log()
                         self.log_message("Permainan di-reset ke kondisi awal S0.")
 
-                    # Simpan / Export Log Pertandingan (L)
-                    elif event.key == pygame.K_l:
-                        self.export_match_log()
 
                     # Toggle Wall Mode (W)
                     elif event.key == pygame.K_w:
